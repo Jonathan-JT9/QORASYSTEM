@@ -48,10 +48,16 @@ def compute_gradcam(
     handle = model.features.register_forward_hook(_hook)
     try:
         logits = model(tensor)
-        if target_index is None:
-            target_index = int(torch.argmax(logits, dim=1).item())
         model.zero_grad(set_to_none=True)
-        logits[0, int(target_index)].backward()
+        if logits.dim() == 2 and logits.shape[1] == 1:
+            logits = logits.view(-1)
+            if target_index is None:
+                target_index = 1 if torch.sigmoid(logits).item() >= 0.5 else 0
+            logits[0].backward()
+        else:
+            if target_index is None:
+                target_index = int(torch.argmax(logits, dim=1).item())
+            logits[0, int(target_index)].backward()
         features = captured.get("act")
         if features is None or features.grad is None:
             raise RuntimeError("Grad-CAM failed: missing activations or gradients.")

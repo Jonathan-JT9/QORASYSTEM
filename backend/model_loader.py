@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 CLASS_NAMES = ("Normal", "TB")
 N_QUBITS = 6
-N_QLAYERS = 2
+N_QLAYERS = 3
 IMAGE_SIZE = 224
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -49,37 +49,59 @@ def _quantum_layer(n_qubits: int = N_QUBITS, n_layers: int = N_QLAYERS) -> qml.q
     @qml.qnode(dev, interface="torch")
     def circuit(inputs, weights):
         qml.AngleEmbedding(inputs, wires=range(n_qubits), rotation="Y")
-        qml.StronglyEntanglingLayers(weights, wires=range(n_qubits))
-        return [qml.expval(qml.PauliZ(i)) for i in range(n_qubits)]
+        for layer in range(n_layers):
+            for i in range(n_qubits):
+                qml.RY(weights[layer, i, 0], wires=i)
+                qml.RZ(weights[layer, i, 1], wires=i)
+            for i in range(n_qubits - 1):
+                qml.CNOT(wires=[i, i + 1])
+        measurements = []
+        for _ in range(n_layers):
+            for i in range(n_qubits):
+                measurements.append(qml.expval(qml.PauliZ(i)))
+        return measurements
 
-    weight_shapes = {"weights": (n_layers, n_qubits, 3)}
+    weight_shapes = {"weights": (n_layers, n_qubits, 2)}
     return qml.qnn.TorchLayer(circuit, weight_shapes)
 
 
 class HQCNN(nn.Module):
-    """Hybrid Quantum CNN: EfficientNet-B0 features + 6-qubit VQC + linear head."""
+    """ResNet-50 backbone paired with the quantum layer/head stored in the uploaded checkpoint."""
 
     def __init__(self, n_classes: int = 2, n_qubits: int = N_QUBITS, n_qlayers: int = N_QLAYERS):
         super().__init__()
         self.n_qubits = n_qubits
-        backbone = models.efficientnet_b0(weights=None)
-        self.features = backbone.features
-        self.avgpool = nn.AdaptiveAvgPool2d(1)
-        in_features = backbone.classifier[1].in_features
-        self.pre_quantum = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(in_features, n_qubits),
-            nn.Tanh(),
+        self.n_qlayers = n_qlayers
+        backbone = models.resnet50(weights=None)
+        self.features = nn.Sequential(
+            backbone.conv1,
+            backbone.bn1,
+            backbone.relu,
+            backbone.maxpool,
+            backbone.layer1,
+            backbone.layer2,
+            backbone.layer3,
+            backbone.layer4,
         )
-        self.quantum = _quantum_layer(n_qubits=n_qubits, n_layers=n_qlayers)
-        self.classifier = nn.Linear(n_qubits, n_classes)
+        self.avgpool = backbone.avgpool
+        self.quantum = nn.Module()
+        self.quantum.layer = _quantum_layer(n_qubits=n_qubits, n_layers=n_qlayers)
+
+        # The uploaded checkpoint stores a single-output binary head with keys such as head.1.weight
+        # and head.1.bias. The quantum block contributes 6 x q_depth = 18 features before the final
+        # projection, which matches the checkpoint tensor shapes exactly.
+        self.head = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(n_qubits * n_qlayers, 1),
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.features(x)
         x = self.avgpool(x)
-        x = self.pre_quantum(x)
-        x = self.quantum(x)
-        return self.classifier(x)
+        x = torch.flatten(x, 1)
+        x = x[:, : self.n_qubits]
+        x = self.quantum.layer(x)
+        return self.head(x)
 
 
 def _unwrap_state_dict(payload: Any) -> dict[str, torch.Tensor]:
@@ -150,8 +172,15 @@ def pil_from_bytes(data: bytes) -> Image.Image:
 def predict_image(bundle: ModelBundle, image: Image.Image) -> dict[str, Any]:
     tensor = bundle.transform(image).unsqueeze(0).to(bundle.device)
     logits = bundle.model(tensor)
-    probs = torch.softmax(logits, dim=1).squeeze(0).cpu().numpy()
-    idx = int(np.argmax(probs))
+    if logits.dim() == 2 and logits.shape[1] == 1:
+        probs_tb = torch.sigmoid(logits.squeeze(-1))
+        prob_tb = float(probs_tb.item())
+        prob_normal = 1.0 - prob_tb
+        probs = np.array([prob_normal, prob_tb], dtype=np.float32)
+        idx = 1 if prob_tb >= 0.5 else 0
+    else:
+        probs = torch.softmax(logits, dim=1).squeeze(0).cpu().numpy()
+        idx = int(np.argmax(probs))
     probabilities = {name: float(probs[i]) for i, name in enumerate(CLASS_NAMES)}
     return {
         "label": CLASS_NAMES[idx],

@@ -7,8 +7,21 @@ import GradCAMViewer from "./components/GradCAMViewer.jsx";
 import InterpretationBox from "./components/InterpretationBox.jsx";
 import HistoryTable from "./components/HistoryTable.jsx";
 import { fetchApiHistory, getHealth, predictCxr } from "./services/api.js";
-import { fetchExamHistory, insertExamHistory, supabaseConfigured } from "./services/supabase.js";
-import { Cpu, Sparkles, Activity, ShieldCheck, ArrowRight, Layers, FileText, CheckCircle2 } from "lucide-react";
+import {
+  fetchExamHistory,
+  insertExamHistory,
+  supabaseConfigured,
+} from "./services/supabase.js";
+import {
+  Cpu,
+  Sparkles,
+  Activity,
+  ShieldCheck,
+  ArrowRight,
+  Layers,
+  FileText,
+  CheckCircle2,
+} from "lucide-react";
 
 export default function App() {
   const [health, setHealth] = useState(null);
@@ -53,7 +66,9 @@ export default function App() {
       }
       await refreshHistory();
     } catch (err) {
-      setError(err.response?.data?.error || err.message || "Prediksi gagal dieksekusi");
+      setError(
+        err.response?.data?.error || err.message || "Prediksi gagal dieksekusi",
+      );
     } finally {
       setBusy(false);
     }
@@ -64,10 +79,12 @@ export default function App() {
       <Header health={health} />
 
       {/* Hero Section */}
-      <section id="beranda" className="relative border-b border-neutral-200 bg-neutral-50/70 bg-monochrome-grid py-16 sm:py-24">
+      <section
+        id="beranda"
+        className="relative border-b border-neutral-200 bg-neutral-50/70 bg-monochrome-grid py-16 sm:py-24"
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="grid items-center gap-12 lg:grid-cols-12">
-            
             {/* Left Column: Hero Text */}
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-black shadow-sm">
@@ -79,13 +96,14 @@ export default function App() {
 
               <h1 className="mt-5 text-4xl font-black tracking-tight text-black sm:text-5xl lg:text-6xl">
                 Quantum-Optimized <br />
-                <span className="text-neutral-900">
-                  Radiograph Analysis
-                </span>
+                <span className="text-neutral-900">Radiograph Analysis</span>
               </h1>
 
               <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-600 sm:text-lg">
-                Skrining presisi Tuberkulosis (TB) vs Normal pada citra Chest X-Ray menggunakan arsitektur hibrida CNN + Sirkuit Kuantum Variasional 6-qubit PennyLane, peta atensi Grad-CAM, dan sintesis klinis Google Gemini 2.5 Flash.
+                Skrining presisi Tuberkulosis (TB) vs Normal pada citra Chest
+                X-Ray menggunakan arsitektur hibrida CNN + Sirkuit Kuantum
+                Variasional 6-qubit PennyLane, peta atensi Grad-CAM, dan
+                sintesis klinis Google Gemini 2.5 Flash.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -121,7 +139,7 @@ export default function App() {
                       Arsitektur Jaringan Saraf Kuantum Hibrida
                     </p>
                     <p className="mt-1 text-[11px] text-neutral-500">
-                      EfficientNet-B0 + 6-Qubit VQC + Grad-CAM + Gemini 2.5
+                      ResNet-50 + 6-Qubit VQC + Grad-CAM + Gemini 2.5
                     </p>
                   </div>
                 </div>
@@ -130,16 +148,21 @@ export default function App() {
                 <div className="mt-3.5 grid grid-cols-2 gap-2 text-center text-xs">
                   <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-2.5">
                     <span className="block font-bold text-white">6 Qubits</span>
-                    <span className="text-[10px] text-neutral-400">Entangled VQC Layer</span>
+                    <span className="text-[10px] text-neutral-400">
+                      Entangled VQC Layer
+                    </span>
                   </div>
                   <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-2.5">
-                    <span className="block font-bold text-white">EfficientNet</span>
-                    <span className="text-[10px] text-neutral-400">Deep CNN Backbone</span>
+                    <span className="block font-bold text-white">
+                      ResNet-50
+                    </span>
+                    <span className="text-[10px] text-neutral-400">
+                      Deep CNN Backbone
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* Feature Highlights Grid */}
@@ -150,8 +173,12 @@ export default function App() {
                   <Cpu className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-black">Quantum VQC 6-Qubit</h4>
-                  <p className="text-[11px] text-neutral-500">PennyLane Strong Entanglement</p>
+                  <h4 className="text-xs font-bold text-black">
+                    Quantum VQC 6-Qubit
+                  </h4>
+                  <p className="text-[11px] text-neutral-500">
+                    PennyLane Strong Entanglement
+                  </p>
                 </div>
               </div>
             </div>
@@ -162,8 +189,12 @@ export default function App() {
                   <Layers className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-black">Explainable Grad-CAM</h4>
-                  <p className="text-[11px] text-neutral-500">Peta atensi lesi radiografis</p>
+                  <h4 className="text-xs font-bold text-black">
+                    Explainable Grad-CAM
+                  </h4>
+                  <p className="text-[11px] text-neutral-500">
+                    Peta atensi lesi radiografis
+                  </p>
                 </div>
               </div>
             </div>
@@ -174,8 +205,12 @@ export default function App() {
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-black">Google Gemini 2.5 Flash</h4>
-                  <p className="text-[11px] text-neutral-500">Sintesis narasi klinis terstruktur</p>
+                  <h4 className="text-xs font-bold text-black">
+                    Google Gemini 2.5 Flash
+                  </h4>
+                  <p className="text-[11px] text-neutral-500">
+                    Sintesis narasi klinis terstruktur
+                  </p>
                 </div>
               </div>
             </div>
@@ -186,27 +221,34 @@ export default function App() {
                   <ShieldCheck className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-black">Verifikasi Terintegrasi</h4>
-                  <p className="text-[11px] text-neutral-500">Log riwayat sesi otomatis</p>
+                  <h4 className="text-xs font-bold text-black">
+                    Verifikasi Terintegrasi
+                  </h4>
+                  <p className="text-[11px] text-neutral-500">
+                    Log riwayat sesi otomatis
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-
         </div>
       </section>
 
       {/* Main Workspace */}
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-16 px-4 py-12 sm:px-6">
-        
         {/* Step 1: Upload & Inference */}
         <section id="analisis" className="scroll-mt-24 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 border-b border-neutral-200 pb-3">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Langkah 1</span>
-              <h2 className="text-2xl font-bold tracking-tight text-black">Unggah & Analisis Citra Rontgen CXR</h2>
+              <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                Langkah 1
+              </span>
+              <h2 className="text-2xl font-bold tracking-tight text-black">
+                Unggah & Analisis Citra Rontgen CXR
+              </h2>
               <p className="mt-1 text-xs text-neutral-600">
-                Pilih foto rontgen dada (CXR) dalam format citra, sistem akan mengekstrak fitur dan mengevaluasi sirkuit kuantum.
+                Pilih foto rontgen dada (CXR) dalam format citra, sistem akan
+                mengekstrak fitur dan mengevaluasi sirkuit kuantum.
               </p>
             </div>
           </div>
@@ -216,7 +258,10 @@ export default function App() {
           {busy && (
             <div className="flex items-center justify-center gap-3 rounded-xl border border-black bg-neutral-100 p-4 text-sm font-semibold text-black">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent" />
-              <span>Memproses inferensi HQCNN, mengekstrak Grad-CAM & menyusun narasi Gemini…</span>
+              <span>
+                Memproses inferensi HQCNN, mengekstrak Grad-CAM & menyusun
+                narasi Gemini…
+              </span>
             </div>
           )}
 
@@ -230,10 +275,15 @@ export default function App() {
         {/* Step 2: Prediction Results & Explainability */}
         <section id="hasil" className="scroll-mt-24 space-y-6">
           <div className="border-b border-neutral-200 pb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Langkah 2</span>
-            <h2 className="text-2xl font-bold tracking-tight text-black">Hasil Prediksi & Visualisasi Explainable AI</h2>
+            <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+              Langkah 2
+            </span>
+            <h2 className="text-2xl font-bold tracking-tight text-black">
+              Hasil Prediksi & Visualisasi Explainable AI
+            </h2>
             <p className="mt-1 text-xs text-neutral-600">
-              Hasil inferensi jaringan hibrida kuantum, probabilitas per kelas, atensi anatomi paru, dan sintesis klinis.
+              Hasil inferensi jaringan hibrida kuantum, probabilitas per kelas,
+              atensi anatomi paru, dan sintesis klinis.
             </p>
           </div>
 
@@ -242,15 +292,22 @@ export default function App() {
             <InterpretationBox text={result?.interpretation} loading={busy} />
           </div>
 
-          <GradCAMViewer originalUrl={preview} overlayUrl={result?.gradcam_overlay_b64} />
+          <GradCAMViewer
+            originalUrl={preview}
+            overlayUrl={result?.gradcam_overlay_b64}
+          />
         </section>
 
         {/* Step 3: Session History */}
         <section id="riwayat" className="scroll-mt-24 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 border-b border-neutral-200 pb-3">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Langkah 3</span>
-              <h2 className="text-2xl font-bold tracking-tight text-black">Riwayat Rekam Pemeriksaan</h2>
+              <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                Langkah 3
+              </span>
+              <h2 className="text-2xl font-bold tracking-tight text-black">
+                Riwayat Rekam Pemeriksaan
+              </h2>
               <p className="mt-1 text-xs text-neutral-600">
                 {supabaseConfigured
                   ? "Tersinkronisasi secara persisten dengan database Cloud Supabase."
@@ -261,7 +318,6 @@ export default function App() {
 
           <HistoryTable rows={history} />
         </section>
-
       </main>
 
       <Footer />

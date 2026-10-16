@@ -1,4 +1,10 @@
-import { AlertTriangle, CheckCircle2, Cpu, ShieldCheck, Activity } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Cpu,
+  ShieldCheck,
+  Activity,
+} from "lucide-react";
 
 export default function PredictionResultCard({ result }) {
   if (!result) {
@@ -7,9 +13,12 @@ export default function PredictionResultCard({ result }) {
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-neutral-300 bg-white text-black shadow-sm">
           <Activity className="h-6 w-6" />
         </div>
-        <p className="font-semibold text-neutral-800">Menunggu Analisis Citra</p>
+        <p className="font-semibold text-neutral-800">
+          Menunggu Analisis Citra
+        </p>
         <p className="mt-1 text-xs text-neutral-500">
-          Hasil klasifikasi HQCNN dan probabilitas kuantum akan ditampilkan di sini.
+          Hasil klasifikasi HQCNN dan probabilitas kuantum akan ditampilkan di
+          sini.
         </p>
       </div>
     );
@@ -20,23 +29,29 @@ export default function PredictionResultCard({ result }) {
   const confidencePct = (result.confidence * 100).toFixed(1);
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border-2 p-6 transition-all shadow-sm ${
-      isTb
-        ? "border-black bg-white"
-        : "border-neutral-300 bg-white"
-    }`}>
+    <div
+      className={`relative overflow-hidden rounded-2xl border-2 p-6 transition-all shadow-sm ${
+        isTb ? "border-black bg-white" : "border-neutral-300 bg-white"
+      }`}
+    >
       {/* Header tag */}
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-neutral-600">
           <Cpu className="h-3.5 w-3.5 text-black" />
           Klasifikasi Quantum HQCNN
         </span>
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-          isTb
-            ? "bg-black text-white"
-            : "border-2 border-black bg-white text-black"
-        }`}>
-          {isTb ? <AlertTriangle className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+            isTb
+              ? "bg-black text-white"
+              : "border-2 border-black bg-white text-black"
+          }`}
+        >
+          {isTb ? (
+            <AlertTriangle className="h-3.5 w-3.5" />
+          ) : (
+            <ShieldCheck className="h-3.5 w-3.5" />
+          )}
           {isTb ? "Indikasi Positif TB" : "Skrining Negatif (Normal)"}
         </span>
       </div>
@@ -54,8 +69,12 @@ export default function PredictionResultCard({ result }) {
           </p>
         </div>
         <div className="text-right">
-          <span className="text-3xl font-black text-black">{confidencePct}%</span>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Keyakinan Argmax</p>
+          <span className="text-3xl font-black text-black">
+            {confidencePct}%
+          </span>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+            Keyakinan Argmax
+          </p>
         </div>
       </div>
 
@@ -72,7 +91,9 @@ export default function PredictionResultCard({ result }) {
           return (
             <div key={cls}>
               <div className="mb-1.5 flex justify-between text-xs">
-                <span className="font-semibold text-neutral-800">{cls === "TB" ? "Tuberkulosis (TB)" : "Normal"}</span>
+                <span className="font-semibold text-neutral-800">
+                  {cls === "TB" ? "Tuberkulosis (TB)" : "Normal"}
+                </span>
                 <span className="font-mono font-bold text-black">{pct}%</span>
               </div>
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-200">
@@ -91,7 +112,7 @@ export default function PredictionResultCard({ result }) {
       {/* Circuit Metadata footnote */}
       <div className="mt-4 flex items-center justify-between pt-2 text-[11px] text-neutral-500">
         <span>Sirkuit: 6-Qubit VQC (PennyLane)</span>
-        <span>Backbone: EfficientNet-B0</span>
+        <span>Backbone: ResNet-50</span>
       </div>
     </div>
   );

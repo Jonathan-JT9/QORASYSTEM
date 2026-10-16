@@ -57,23 +57,23 @@ QORASYS/
 
 ## 3. Backend modules
 
-| Module | Responsibility |
-|--------|----------------|
-| `app.py` | HTTP layer only: parse upload, call services, return JSON. |
-| `model_loader.py` | EfficientNet-B0 backbone + 6-qubit PennyLane `TorchLayer` + classifier. Loads `best.pt`. |
-| `gradcam.py` | Gradients on the last convolutional block of the CNN backbone; jet heatmap overlay. |
-| `gemini_service.py` | Builds a clinical-style prompt from class probabilities and returns narrative text. |
+| Module              | Responsibility                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------- |
+| `app.py`            | HTTP layer only: parse upload, call services, return JSON.                                |
+| `model_loader.py`   | ResNet-50 backbone + 6-qubit PennyLane `TorchLayer` + binary classifier. Loads `best.pt`. |
+| `gradcam.py`        | Gradients on the last convolutional block of the CNN backbone; jet heatmap overlay.       |
+| `gemini_service.py` | Builds a clinical-style prompt from class probabilities and returns narrative text.       |
 
 ### HQCNN forward pass
 
 1. CXR → RGB 224×224, ImageNet normalization.
-2. CNN backbone extracts spatial features.
-3. Global average pooling + linear projection to **6** real values (one per qubit).
-4. Variational Quantum Circuit: `AngleEmbedding` + `StronglyEntanglingLayers` on `default.qubit`.
-5. Pauli-Z expectations (6) → linear head → **2 logits** (`Normal`, `TB`).
-6. Softmax → class probabilities.
+2. ResNet-50 extracts image features; global average pooling produces the feature vector.
+3. The first **6** pooled features are encoded, one per qubit.
+4. The 6-qubit variational circuit applies angle embedding, trainable rotations, and entanglement on `default.qubit`.
+5. Pauli-Z expectations from **3** circuit layers produce **18** values for the trained linear head.
+6. The head returns one logit; sigmoid gives the TB probability and its complement gives the Normal probability.
 
-If your trained `best.pt` used a different backbone, qubit count, or layer depth, adjust constants in `model_loader.py` (`N_QUBITS`, `N_QLAYERS`, `BACKBONE`) so `state_dict` keys align. Loading uses `strict=False` as a safety net and logs missing/unexpected keys.
+The loaded checkpoint metadata identifies the backbone as `resnet50`. If a future checkpoint uses a different backbone, qubit count, or layer depth, update `model_loader.py` and ensure its state-dict keys and tensor shapes match. Loading uses `strict=False` as a safety net and logs missing/unexpected keys; the current `best.pt` has no missing or unexpected keys.
 
 ## 4. API contracts
 
@@ -103,14 +103,14 @@ Liveness + whether the checkpoint loaded.
 
 ## 5. Frontend
 
-| Component | Role |
-|-----------|------|
-| `Header` | Branding, health badge, nav. |
-| `ImageUploadDropzone` | Drag-and-drop / file picker for CXR. |
-| `PredictionResultCard` | Label, confidence, dual-class bars. |
-| `GradCAMViewer` | Original vs overlay. |
-| `InterpretationBox` | Gemini clinical narrative. |
-| `HistoryTable` | Rows from Supabase (fallback: API memory). |
+| Component              | Role                                       |
+| ---------------------- | ------------------------------------------ |
+| `Header`               | Branding, health badge, nav.               |
+| `ImageUploadDropzone`  | Drag-and-drop / file picker for CXR.       |
+| `PredictionResultCard` | Label, confidence, dual-class bars.        |
+| `GradCAMViewer`        | Original vs overlay.                       |
+| `InterpretationBox`    | Gemini clinical narrative.                 |
+| `HistoryTable`         | Rows from Supabase (fallback: API memory). |
 
 Services:
 

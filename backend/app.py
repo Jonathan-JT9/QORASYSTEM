@@ -29,10 +29,11 @@ MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
-CORS(
-    app,
-    resources={r"/api/*": {"origins": os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")}},
-)
+allowed_origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175",
+).split(",")
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 # In-memory history for local demos. Production persistence is Supabase.
 SESSION_HISTORY: list[dict] = []
@@ -146,6 +147,6 @@ def history_create():
 
 if __name__ == "__main__":
     host = os.getenv("FLASK_HOST", "0.0.0.0")
-    port = int(os.getenv("FLASK_PORT", "5000"))
+    port = int(os.getenv("FLASK_PORT", "8000"))
     debug = os.getenv("FLASK_ENV", "development") == "development"
     app.run(host=host, port=port, debug=debug)
