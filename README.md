@@ -1,6 +1,6 @@
 # QORA — Quantum-Optimized Radiograph Analysis
 
-Sistem web klasifikasi **Tuberkulosis vs Normal** pada citra Chest X-Ray (CXR) menggunakan model **HQCNN** (backbone CNN + sirkuit kuantum VQC 6-qubit PennyLane), visualisasi **Grad-CAM**, interpretasi klinis **Google Gemini 2.5 Flash**, dan penyimpanan riwayat lewat **Supabase**.
+Sistem web klasifikasi **Tuberkulosis vs Normal** pada citra Chest X-Ray (CXR) menggunakan model **HQCNN** (backbone CNN + sirkuit kuantum VQC 6-qubit PennyLane), visualisasi **Grad-CAM**, interpretasi klinis **Google Gemini 3.8 Flash**, dan penyimpanan riwayat lewat **Supabase**.
 
 > Bukan alat diagnosis resmi. Hasil prediksi hanya pendukung keputusan klinis.
 

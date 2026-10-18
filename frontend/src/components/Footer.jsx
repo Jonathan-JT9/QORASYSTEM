@@ -3,7 +3,7 @@ export default function Footer() {
     <footer className="mt-20 border-t border-neutral-900 bg-black text-white">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
         <div className="grid gap-10 md:grid-cols-4">
-          
+
           {/* Brand & Mission */}
           <div className="space-y-4 md:col-span-2">
             <div className="flex items-center">
@@ -19,7 +19,7 @@ export default function Footer() {
             <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-neutral-300">
               <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">PennyLane VQC</span>
               <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">PyTorch HQCNN</span>
-              <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">Gemini 2.5 Flash</span>
+              <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">Gemini 3.8 Flash</span>
               <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">Grad-CAM XAI</span>
             </div>
           </div>

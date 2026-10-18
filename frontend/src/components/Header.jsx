@@ -7,7 +7,7 @@ export default function Header({ health }) {
   return (
     <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/95 backdrop-blur-md transition-all">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        
+
         {/* Logo and Brand */}
         <a href="#beranda" className="group flex items-center gap-3">
           <div className="flex items-center rounded-xl bg-black px-3.5 py-1.5 shadow-sm transition-all duration-200 group-hover:bg-neutral-900">
@@ -23,7 +23,7 @@ export default function Header({ health }) {
                 6-QUBIT VQC
               </span>
               <span className="rounded border border-neutral-300 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-neutral-600">
-                GEMINI 2.5
+                GEMINI 3.8
               </span>
             </div>
           </div>

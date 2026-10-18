@@ -100,10 +100,10 @@ export default function App() {
               </h1>
 
               <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-600 sm:text-lg">
-                Skrining presisi Tuberkulosis (TB) vs Normal pada citra Chest
-                X-Ray menggunakan arsitektur hibrida CNN + Sirkuit Kuantum
+                Klasifikasi citra Chest X-Ray ke dalam kategori Tuberkulosis (TB) dan Normal
+                menggunakan arsitektur hibrida CNN + Sirkuit Kuantum
                 Variasional 6-qubit PennyLane, peta atensi Grad-CAM, dan
-                sintesis klinis Google Gemini 2.5 Flash.
+                sintesis klinis Google Gemini 3.8 Flash.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -139,7 +139,7 @@ export default function App() {
                       Arsitektur Jaringan Saraf Kuantum Hibrida
                     </p>
                     <p className="mt-1 text-[11px] text-neutral-500">
-                      ResNet-50 + 6-Qubit VQC + Grad-CAM + Gemini 2.5
+                      ResNet-50 + 6-Qubit VQC + Grad-CAM + Gemini 3.8
                     </p>
                   </div>
                 </div>
@@ -193,7 +193,7 @@ export default function App() {
                     Explainable Grad-CAM
                   </h4>
                   <p className="text-[11px] text-neutral-500">
-                    Peta atensi lesi radiografis
+                    Visualisasi kontribusi fitur model
                   </p>
                 </div>
               </div>
@@ -206,7 +206,7 @@ export default function App() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-black">
-                    Google Gemini 2.5 Flash
+                    Google Gemini 3.8 Flash
                   </h4>
                   <p className="text-[11px] text-neutral-500">
                     Sintesis narasi klinis terstruktur
@@ -283,7 +283,7 @@ export default function App() {
             </h2>
             <p className="mt-1 text-xs text-neutral-600">
               Hasil inferensi jaringan hibrida kuantum, probabilitas per kelas,
-              atensi anatomi paru, dan sintesis klinis.
+              visualisasi Grad-CAM, dan interpretasi pendukung keputusan klinis.
             </p>
           </div>
 

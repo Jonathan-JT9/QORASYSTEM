@@ -1,4 +1,4 @@
-"""Grad-CAM heatmap generation and overlay onto CXR images."""
+"""Grad-CAM heatmap generation for QORA Hybrid QCNN."""
 
 from __future__ import annotations
 
@@ -18,8 +18,7 @@ def _tensor_to_display_rgb(tensor: torch.Tensor) -> np.ndarray:
     mean = torch.tensor(IMAGENET_MEAN).view(3, 1, 1)
     std = torch.tensor(IMAGENET_STD).view(3, 1, 1)
     img = img * std + mean
-    img = img.clamp(0, 1).permute(1, 2, 0).numpy()
-    return img
+    return img.clamp(0, 1).permute(1, 2, 0).numpy()
 
 
 def _jet_colormap(values: np.ndarray) -> np.ndarray:
@@ -35,49 +34,81 @@ def compute_gradcam(
     image: Image.Image,
     target_index: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Return (overlay RGB uint8, heatmap float 0-1) for the target class."""
+    """Return Grad-CAM overlay (RGB uint8) and normalized heatmap."""
     model = bundle.model
     model.eval()
-    tensor = bundle.transform(image).unsqueeze(0).to(bundle.device)
+    tensor = bundle.transform(image.convert("RGB")).unsqueeze(0).to(bundle.device)
     captured: dict[str, torch.Tensor] = {}
 
-    def _hook(_module, _inp, output):
+    def _hook(_module, _inputs, output):
         output.retain_grad()
-        captured["act"] = output
+        captured["activations"] = output
 
     handle = model.features.register_forward_hook(_hook)
+
     try:
-        logits = model(tensor)
-        model.zero_grad(set_to_none=True)
-        if logits.dim() == 2 and logits.shape[1] == 1:
-            logits = logits.view(-1)
+        with torch.enable_grad():
+            model.zero_grad(set_to_none=True)
+            logits = model(tensor)
+
+            if logits.numel() != 1:
+                raise RuntimeError(
+                    f"Unexpected model output shape: {tuple(logits.shape)}"
+                )
+
+            logit = logits.reshape(-1)[0]
+            prob_tb = torch.sigmoid(logit).item()
+
             if target_index is None:
-                target_index = 1 if torch.sigmoid(logits).item() >= 0.5 else 0
-            logits[0].backward()
-        else:
-            if target_index is None:
-                target_index = int(torch.argmax(logits, dim=1).item())
-            logits[0, int(target_index)].backward()
-        features = captured.get("act")
-        if features is None or features.grad is None:
-            raise RuntimeError("Grad-CAM failed: missing activations or gradients.")
-        weights = features.grad.mean(dim=(2, 3), keepdim=True)
-        cam = F.relu((weights * features).sum(dim=1, keepdim=True))
-        cam = F.interpolate(cam, size=tensor.shape[-2:], mode="bilinear", align_corners=False)
-        cam_np = cam.squeeze().detach().cpu().numpy()
+                target_index = 1 if prob_tb >= bundle.threshold else 0
+
+            if target_index not in (0, 1):
+                raise ValueError("target_index harus 0 (Normal) atau 1 (TB).")
+
+            target_score = logit if target_index == 1 else -logit
+            target_score.backward()
+
+            activations = captured.get("activations")
+            if activations is None or activations.grad is None:
+                raise RuntimeError(
+                    "Grad-CAM gagal: activations atau gradients tidak ditemukan."
+                )
+
+            gradients = activations.grad
+            weights = gradients.mean(dim=(2, 3), keepdim=True)
+            cam = F.relu((weights * activations).sum(dim=1, keepdim=True))
+            cam = F.interpolate(
+                cam,
+                size=tensor.shape[-2:],
+                mode="bilinear",
+                align_corners=False,
+            )
+            cam_np = cam.squeeze().detach().cpu().numpy()
+
     finally:
         handle.remove()
+        model.zero_grad(set_to_none=True)
 
-    cam_min, cam_max = float(cam_np.min()), float(cam_np.max())
-    heatmap = (cam_np - cam_min) / (cam_max - cam_min + 1e-8)
+    if not np.isfinite(cam_np).all():
+        raise RuntimeError("Grad-CAM menghasilkan nilai yang tidak valid.")
+
+    cam_min = float(cam_np.min())
+    cam_max = float(cam_np.max())
+
+    if cam_max - cam_min < 1e-8:
+        heatmap = np.zeros_like(cam_np, dtype=np.float32)
+    else:
+        heatmap = ((cam_np - cam_min) / (cam_max - cam_min)).astype(np.float32)
+
     base = _tensor_to_display_rgb(tensor)
     overlay = 0.45 * _jet_colormap(heatmap) + 0.55 * base
     overlay_uint8 = (np.clip(overlay, 0, 1) * 255).astype(np.uint8)
+
     return overlay_uint8, heatmap
 
 
 def overlay_to_data_url(overlay_rgb: np.ndarray) -> str:
-    image = Image.fromarray(overlay_rgb, mode="RGB")
+    image = Image.fromarray(overlay_rgb)
     buffer = BytesIO()
     image.save(buffer, format="PNG")
     encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
@@ -89,5 +120,5 @@ def generate_gradcam_data_url(
     image: Image.Image,
     target_index: int | None = None,
 ) -> str:
-    overlay, _heatmap = compute_gradcam(bundle, image, target_index=target_index)
+    overlay, _ = compute_gradcam(bundle, image, target_index=target_index)
     return overlay_to_data_url(overlay)
