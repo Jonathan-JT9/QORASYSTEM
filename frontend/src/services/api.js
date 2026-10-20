@@ -2,7 +2,7 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/",
-  timeout: 180000,
+  timeout: 0
 });
 
 export async function getHealth() {
@@ -13,9 +13,13 @@ export async function getHealth() {
 export async function predictCxr(file) {
   const form = new FormData();
   form.append("image", file);
-  const { data } = await api.post("/api/predict", form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+
+  const { data } = await api.post("/api/predict", form);
+  return data;
+}
+
+export async function interpretCxr(id) {
+  const { data } = await api.post("/api/interpret", { id });
   return data;
 }
 
