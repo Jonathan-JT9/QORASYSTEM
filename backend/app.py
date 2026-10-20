@@ -11,6 +11,7 @@ from flask import Flask,jsonify,request
 from flask_cors import CORS
 from PIL import Image,UnidentifiedImageError
 from gemini_service import interpret_prediction
+from image_validator import validate_chest_xray
 from gradcam import generate_gradcam_data_url
 from model_loader import load_model,pil_from_bytes,predict_image
 
@@ -121,6 +122,30 @@ def predict():
             "error":"INVALID_IMAGE",
             "message":"Gambar tidak valid atau rusak."
         }),400
+    
+    try:
+        validation=validate_chest_xray(image)
+
+    except Exception:
+        logger.exception("Chest X-Ray validation failed")
+
+        return jsonify({
+            "error":"CXR_VALIDATION_FAILED",
+            "message":"Sistem tidak dapat memvalidasi jenis gambar saat ini. Silakan coba kembali."
+        }),503
+
+    if not validation["accepted"]:
+        logger.warning(
+            "Non-CXR image rejected: category=%s chest_score=%.4f",
+            validation["detected_category"],
+            validation["chest_score"]
+        )
+
+        return jsonify({
+            "error":"INVALID_CHEST_XRAY",
+            "message":"Gambar yang diunggah tidak teridentifikasi sebagai Chest X-Ray. Silakan unggah citra rontgen dada yang memperlihatkan area paru-paru.",
+            "detected_type":validation["detected_label"]
+        }),422
 
     try:
         bundle=get_bundle()
@@ -283,9 +308,31 @@ def file_too_large(_error):
     }),413
 
 if __name__=="__main__":
+    from image_validator import load_validator
+
     host=os.getenv("FLASK_HOST","127.0.0.1")
     port=int(os.getenv("FLASK_PORT","8000"))
-    debug=os.getenv("FLASK_DEBUG","0")=="1"
+
+    logger.info("Preparing QORA models...")
+
+    try:
+        logger.info("Loading HQCNN...")
+        get_bundle()
+
+        logger.info("Loading Chest X-Ray validator...")
+        load_validator()
+
+        logger.info("All QORA models are ready.")
+
+    except Exception:
+        logger.exception("QORA model initialization failed")
+        raise SystemExit(1)
 
     logger.info("Starting QORA backend at %s:%s",host,port)
-    app.run(host=host,port=port,debug=debug)
+
+    app.run(
+        host=host,
+        port=port,
+        debug=False,
+        use_reloader=False
+    )

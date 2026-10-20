@@ -19,7 +19,7 @@ export default function Footer() {
             <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-neutral-300">
               <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">PennyLane VQC</span>
               <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">PyTorch HQCNN</span>
-              <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">Gemini 3.8 Flash</span>
+              <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">Gemini 2.5 Flash</span>
               <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">Grad-CAM XAI</span>
             </div>
           </div>

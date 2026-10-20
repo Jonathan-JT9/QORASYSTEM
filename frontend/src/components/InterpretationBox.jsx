@@ -25,7 +25,7 @@ export default function InterpretationBox({ text, loading = false }) {
           </div>
           <div>
             <h3 className="text-lg font-bold text-black">Interpretasi Klinis AI</h3>
-            <p className="text-sm text-neutral-500">Disintesis oleh Google Gemini 3.8 Flash</p>
+            <p className="text-sm text-neutral-500">Disintesis oleh Google Gemini 2.5 Flash</p>
           </div>
         </div>
         {text && (

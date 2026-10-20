@@ -23,7 +23,7 @@ export default function Header({ health }) {
                 6-QUBIT VQC
               </span>
               <span className="rounded border border-neutral-300 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-neutral-600">
-                GEMINI 3.8
+                GEMINI 2.5
               </span>
             </div>
           </div>
