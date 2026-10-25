@@ -19,7 +19,7 @@ export default function Footer() {
             <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-neutral-300">
               <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">PennyLane VQC</span>
               <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">PyTorch HQCNN</span>
-              <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">Gemini 2.5 Flash</span>
+              <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">Gemini 3.5 Flash</span>
               <span className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 font-mono">Grad-CAM XAI</span>
             </div>
           </div>
@@ -29,23 +29,18 @@ export default function Footer() {
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Navigasi Modul</h4>
             <ul className="mt-3 space-y-2 text-xs text-neutral-400">
               <li>
-                <a href="#beranda" className="transition-colors hover:text-white">
-                  Beranda
+                <a href="#/home" className="transition-colors hover:text-white">
+                  Home
                 </a>
               </li>
               <li>
-                <a href="#analisis" className="transition-colors hover:text-white">
-                  Analisis Rontgen CXR
+                <a href="#/classification" className="transition-colors hover:text-white">
+                  Classification
                 </a>
               </li>
               <li>
-                <a href="#hasil" className="transition-colors hover:text-white">
-                  Hasil Prediksi & Grad-CAM
-                </a>
-              </li>
-              <li>
-                <a href="#riwayat" className="transition-colors hover:text-white">
-                  Riwayat Pemeriksaan
+                <a href="#/history" className="transition-colors hover:text-white">
+                  History
                 </a>
               </li>
             </ul>

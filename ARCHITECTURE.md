@@ -16,7 +16,7 @@ This document describes how the pieces fit together. It is the source of truth f
        │  Auth + exam history                         │  HQCNN (PyTorch)
        ▼                                              │  PennyLane VQC
 ┌─────────────┐                                       │  Grad-CAM
-│  Supabase   │                                       │  Gemini 2.5 Flash
+│  Supabase   │                                       │  Gemini 3.5 Flash
 │  Postgres   │                                       ▼
 │  Auth / RLS │                              checkpoints/best.pt
 └─────────────┘
@@ -36,7 +36,7 @@ QORASYS/
 │   ├── app.py               ← Flask entry, CORS, routes
 │   ├── model_loader.py      ← HQCNN definition, checkpoint, inference
 │   ├── gradcam.py           ← heatmap + overlay
-│   ├── gemini_service.py    ← Gemini 2.5 Flash narrative
+│   ├── gemini_service.py    ← Gemini 3.5 Flash narrative
 │   ├── requirements.txt
 │   └── checkpoints/         ← place best.pt here (gitignored)
 ├── frontend/

@@ -10,7 +10,22 @@ import { fetchApiHistory, getHealth, predictCxr, interpretCxr } from "./services
 import { fetchExamHistory, insertExamHistory, supabaseConfigured } from "./services/supabase.js";
 import { Cpu, Sparkles, Activity, ShieldCheck, ArrowRight, Layers } from "lucide-react";
 
+function getPage() {
+  switch (window.location.hash) {
+    case "#/classification":
+    case "#analisis":
+    case "#hasil":
+      return "classification";
+    case "#/history":
+    case "#riwayat":
+      return "history";
+    default:
+      return "home";
+  }
+}
+
 export default function App() {
+  const [page, setPage] = useState(getPage);
   const [health, setHealth] = useState(null);
   const [busy, setBusy] = useState(false);
   const [interpreting, setInterpreting] = useState(false);
@@ -20,6 +35,18 @@ export default function App() {
   const [preview, setPreview] = useState("");
   const [history, setHistory] = useState([]);
   const requestId = useRef(0);
+
+  useEffect(() => {
+    function navigate() {
+      setPage(getPage());
+    }
+    window.addEventListener("hashchange", navigate);
+    return () => window.removeEventListener("hashchange", navigate);
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [page]);
 
   const refreshHistory = useCallback(async () => {
     try {
@@ -129,9 +156,10 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-neutral-900 selection:bg-black selection:text-white">
-      <Header health={health} />
+      <Header health={health} page={page} />
 
-      <section id="beranda" className="relative border-b border-neutral-200 bg-neutral-50/70 bg-monochrome-grid py-16 sm:py-24">
+      <main className="flex-1">
+      <section hidden={page !== "home"} id="beranda" aria-label="Home" className="relative border-b border-neutral-200 bg-neutral-50/70 bg-monochrome-grid py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="grid items-center gap-12 lg:grid-cols-12">
             <div className="lg:col-span-7">
@@ -151,17 +179,17 @@ export default function App() {
                 Klasifikasi citra Chest X-Ray ke dalam kategori Tuberkulosis (TB) dan Normal
                 menggunakan arsitektur hibrida CNN + Sirkuit Kuantum
                 Variasional 6-qubit PennyLane, peta atensi Grad-CAM, dan
-                sintesis klinis Google Gemini 2.5 Flash.
+                sintesis klinis Google Gemini 3.5 Flash.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-4">
-                <a href="#analisis" className="inline-flex items-center gap-2 rounded-xl bg-black px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-neutral-800 active:scale-98">
+                <a href="#/classification" className="inline-flex items-center gap-2 rounded-xl bg-black px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-neutral-800 active:scale-98">
                   <Sparkles className="h-4 w-4" />
                   <span>Mulai Analisis CXR</span>
                   <ArrowRight className="h-4 w-4" />
                 </a>
 
-                <a href="#riwayat" className="inline-flex items-center gap-2 rounded-xl border border-neutral-300 bg-white px-6 py-3.5 text-sm font-bold text-black shadow-sm transition-all duration-200 hover:border-black hover:bg-neutral-50">
+                <a href="#/history" className="inline-flex items-center gap-2 rounded-xl border border-neutral-300 bg-white px-6 py-3.5 text-sm font-bold text-black shadow-sm transition-all duration-200 hover:border-black hover:bg-neutral-50">
                   <Activity className="h-4 w-4 text-black" />
                   <span>Riwayat Sesi</span>
                 </a>
@@ -178,7 +206,7 @@ export default function App() {
                       Arsitektur Jaringan Saraf Kuantum Hibrida
                     </p>
                     <p className="mt-1 text-[11px] text-neutral-500">
-                      ResNet-50 + 6-Qubit VQC + Grad-CAM + Gemini 2.5
+                      ResNet-50 + 6-Qubit VQC + Grad-CAM + Gemini 3.5
                     </p>
                   </div>
                 </div>
@@ -233,7 +261,7 @@ export default function App() {
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-black">Google Gemini 2.5 Flash</h4>
+                  <h4 className="text-xs font-bold text-black">Google Gemini 3.5 Flash</h4>
                   <p className="text-[11px] text-neutral-500">Sintesis narasi klinis terstruktur</p>
                 </div>
               </div>
@@ -254,7 +282,8 @@ export default function App() {
         </div>
       </section>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-16 px-4 py-12 sm:px-6">
+      {/* Keep page contents mounted so navigation preserves uploads and view settings. */}
+      <div hidden={page !== "classification"} aria-label="Classification" className="mx-auto w-full max-w-7xl space-y-16 px-4 py-12 sm:px-6">
         <section id="analisis" className="scroll-mt-24 space-y-4">
           <div className="flex flex-col gap-2 border-b border-neutral-200 pb-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -320,6 +349,9 @@ export default function App() {
           />
         </section>
 
+      </div>
+
+      <div hidden={page !== "history"} aria-label="History" className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6">
         <section id="riwayat" className="scroll-mt-24 space-y-4">
           <div className="flex flex-col gap-2 border-b border-neutral-200 pb-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -337,6 +369,7 @@ export default function App() {
 
           <HistoryTable rows={history} />
         </section>
+      </div>
       </main>
 
       <Footer />
