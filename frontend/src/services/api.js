@@ -33,4 +33,14 @@ export async function saveApiHistory(entry) {
   return data;
 }
 
+export async function sendChatMessage({ prediction_id, message, history = [], context = {} }) {
+  const { data } = await api.post("/api/chat", {
+    prediction_id,
+    message,
+    history,
+    context
+  });
+  return data;
+}
+
 export default api;

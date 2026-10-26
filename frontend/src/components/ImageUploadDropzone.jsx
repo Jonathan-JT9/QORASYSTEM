@@ -34,11 +34,10 @@ export default function ImageUploadDropzone({ onFile, disabled, onUseSample }) {
   return (
     <div className="space-y-3">
       <label
-        className={`relative block cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed p-8 sm:p-12 text-center transition-all duration-300 ${
-          drag
+        className={`relative block cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed p-8 sm:p-12 text-center transition-all duration-300 ${drag
             ? "border-black bg-neutral-100 shadow-sm"
             : "border-neutral-300 bg-white hover:border-black hover:bg-neutral-50/50"
-        } ${disabled ? "pointer-events-none opacity-60" : ""}`}
+          } ${disabled ? "pointer-events-none opacity-60" : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
           setDrag(true);

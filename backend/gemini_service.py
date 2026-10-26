@@ -116,3 +116,116 @@ def interpret_prediction(label:str,probabilities:dict[str,float],confidence:floa
             time.sleep(delay)
 
     raise RuntimeError("Gemini interpretation failed.")
+
+
+def answer_chat_query(
+    message: str,
+    history: list[dict] | None = None,
+    context: dict | None = None
+) -> str:
+    """Answer clinical follow-up questions from doctor strictly constrained to QORA, CXR, Grad-CAM, TB & Normal."""
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
+    context = context or {}
+
+    label = context.get("label", "Tidak spesifik")
+    confidence = float(context.get("confidence", 0.0))
+    probs = context.get("probabilities") or {}
+    tb_prob = float(probs.get("TB", 0.0))
+    normal_prob = float(probs.get("Normal", 0.0))
+    filename = context.get("filename", "Citra CXR Pasien")
+    interpretation = context.get("interpretation", "Belum ada interpretasi.")
+
+    gradcam_info = context.get("gradcam_analysis") or {}
+    if isinstance(gradcam_info, dict):
+        gradcam_summary = gradcam_info.get("summary") or "Visualisasi Grad-CAM menunjukkan area kontribusi fitur model."
+        primary_zone = gradcam_info.get("primary_zone", "Lapang pandang toraks terkait")
+        primary_max = float(gradcam_info.get("primary_max", 0.0))
+    else:
+        gradcam_summary = str(gradcam_info)
+        primary_zone = "Lapang pandang toraks terkait"
+        primary_max = 0.0
+
+    system_instruction = (
+        "Anda adalah Asisten Klinis Interaktif QORA (Quantum-Optimized Radiograph Analysis).\n"
+        "Tugas Anda adalah mendampingi dokter dan tenaga medis dalam berdiskusi secara interaktif mengenai hasil "
+        "analisis citra Chest X-Ray (CXR) saat ini, peta perhatian Grad-CAM, serta sistem QORA dan kondisi Tuberkulosis / Paru Normal.\n\n"
+        "--- DATA HASIL PEMERIKSAAN PASIEN SAAT INI ---\n"
+        f"- Nama Berkas: {filename}\n"
+        f"- Hasil Klasifikasi: {label}\n"
+        f"- Tingkat Keyakinan (Confidence): {confidence:.2%}\n"
+        f"- Probabilitas Kelas: Tuberkulosis (TB): {tb_prob:.2%} | Normal: {normal_prob:.2%}\n"
+        f"- Analisis Spasial Grad-CAM: {gradcam_summary}\n"
+        f"- Zona Fokus Puncak Grad-CAM: {primary_zone} (Intensitas: {primary_max:.1%})\n"
+        f"- Interpretasi Klinis 1-4 yang telah dihasilkan:\n{interpretation}\n\n"
+        "--- ATURAN DAN BATASAN CAKUPAN KETAT (GUARDRAILS) ---\n"
+        "1. CAKUPAN YANG DIPERBOLEHKAN (PERMITTED SCOPE):\n"
+        "   Anda HANYA diperbolehkan menjawab pertanyaan yang berkaitan dengan:\n"
+        "   a. Sistem QORA: Arsitektur Hybrid QCNN (ResNet-50 + 6-Qubit VQC PennyLane), threshold klasifikasi, cara kerja pipeline.\n"
+        "   b. Hasil klasifikasi saat ini: Arti label prediksi, nilai confidence, skor probabilitas TB vs Normal.\n"
+        "   c. Grad-CAM: Makna warna merah/kuning (aktivasi tinggi/kontribusi fitur terbesar terhadap prediksi) vs biru/dingin (aktivasi rendah), "
+        "lokasi fokus atensi pada lapang paru pasien, dan batasan Explainable AI (Grad-CAM adalah atensi komputasi visual jaringan saraf, bukan visualisasi mikroskopis kuman atau batas lesi biologis mutlak).\n"
+        "   d. Citra Thoraks (Chest X-Ray / CXR): Anatomi radiologis paru (lapang atas/apikal, tengah, bawah, corakan bronkovaskular, hilus, diafragma, sinus kostofrenikus).\n"
+        "   e. Tuberkulosis (TBC / TB) dan Paru Normal: Patofisiologi Mycobacterium tuberculosis, tanda/gejala klinis TB, bentuk lesi CXR tipikal TB (infiltrat, kavitas, fibroinfiltrat, efusi), "
+        "konfirmasi diagnostik standar (Tes Cepat Molekuler TCM/GeneXpert MTB/RIF, BTA sputum, kultur), tatalaksana klinis (panduan OAT lini pertama Kemenkes/WHO), serta temuan foto toraks normal.\n\n"
+        "2. CAKUPAN YANG DILARANG (OUT-OF-SCOPE REFUSAL RULE):\n"
+        "   Jika pengguna menanyakan hal APAPUN di luar topik di atas (seperti penyakit umum lain di luar TB/paru, resep makanan, pemrograman umum, politik, "
+        "olahraga, percakapan umum tanpa kaitan dengan sistem/TB/CXR/Grad-CAM):\n"
+        "   ANDA WAJIB MENOLAK SECARA SOPAN menggunakan kalimat berikut:\n"
+        "   \"Maaf, saya tidak bisa membantu menjawab pertanyaan tersebut. Pertanyaan ini berada di luar ruang lingkup sistem QORA. Saya hanya dapat membantu menjawab pertanyaan seputar sistem QORA, hasil analisis citra Chest X-Ray (CXR), visualisasi Grad-CAM, serta kondisi Tuberkulosis (TBC) dan paru normal.\"\n"
+        "   (Jika pengguna bertanya dalam bahasa Inggris, gunakan: \"I'm sorry, I can't help you with that. This inquiry is outside the scope of the QORA system. I can only assist with questions regarding the QORA diagnostic system, the Chest X-Ray (CXR) analysis results, Grad-CAM visual explanations, and topics related to Tuberculosis and normal lung conditions.\")\n\n"
+        "3. GAYA KOMUNIKASI:\n"
+        "   - Berikan jawaban yang lugas, ilmiah, berbasis panduan medis, dan mudah dipahami klinisi.\n"
+        "   - Gunakan format markdown yang rapi (bullet points, bold untuk kata kunci).\n"
+        "   - Ingatkan bahwa QORA adalah alat bantu skrining dan keputusan klinis, bukan pengganti pemeriksaan klinis langsung dan konfirmasi mikrobiologis."
+    )
+
+    contents: list[types.Content] = []
+
+    safe_history = (history or [])[-10:]
+    for item in safe_history:
+        role = item.get("role")
+        text = (item.get("text") or item.get("content") or "").strip()
+        if not text:
+            continue
+        gemini_role = "user" if role in ("user", "human") else "model"
+        contents.append(
+            types.Content(
+                role=gemini_role,
+                parts=[types.Part.from_text(text=text)]
+            )
+        )
+
+    contents.append(
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=message.strip())]
+        )
+    )
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            logger.info("Gemini chat query started: model=%s attempt=%s", model_name, attempt)
+            response = get_client().models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    temperature=0.2,
+                    max_output_tokens=600,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
+                )
+            )
+
+            text = (response.text or "").strip()
+            if not text:
+                raise RuntimeError("Respons Gemini kosong.")
+            return text
+
+        except Exception as exc:
+            logger.exception("Gemini chat query failed on attempt %s", attempt)
+            if attempt == MAX_ATTEMPTS:
+                raise
+            time.sleep(RETRY_DELAYS[min(attempt - 1, len(RETRY_DELAYS) - 1)])
+
+    raise RuntimeError("Gemini chat failed after maximum attempts.")

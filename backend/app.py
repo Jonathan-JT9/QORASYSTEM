@@ -10,9 +10,9 @@ from dotenv import load_dotenv
 from flask import Flask,jsonify,request
 from flask_cors import CORS
 from PIL import Image,UnidentifiedImageError
-from gemini_service import interpret_prediction
+from gemini_service import answer_chat_query, interpret_prediction
 from image_validator import validate_chest_xray
-from gradcam import generate_gradcam_data_url
+from gradcam import generate_gradcam_data_url, generate_gradcam_result
 from model_loader import load_model,pil_from_bytes,predict_image
 
 ROOT=Path(__file__).resolve().parent
@@ -150,7 +150,7 @@ def predict():
     try:
         bundle=get_bundle()
         result=predict_image(bundle,image)
-        overlay=generate_gradcam_data_url(
+        overlay,analysis=generate_gradcam_result(
             bundle,
             image,
             target_index=result["class_index"]
@@ -170,6 +170,7 @@ def predict():
         "confidence":result["confidence"],
         "probabilities":result["probabilities"],
         "gradcam_overlay_b64":overlay,
+        "gradcam_analysis":analysis,
         "interpretation":None,
         "model":{
             "name":"HQCNN",
@@ -268,6 +269,57 @@ def interpret():
         return jsonify({
             "error":"GEMINI_FAILED",
             "message":"Gemini AI gagal menghasilkan interpretasi. Silakan coba kembali."
+        }),502
+
+@app.post("/api/chat")
+def chat():
+    body=request.get_json(silent=True)
+    if not isinstance(body,dict):
+        return jsonify({
+            "error":"INVALID_REQUEST",
+            "message":"Permintaan chat tidak valid."
+        }),400
+
+    message=(body.get("message") or "").strip()
+    if not message:
+        return jsonify({
+            "error":"EMPTY_MESSAGE",
+            "message":"Pesan pertanyaan tidak boleh kosong."
+        }),400
+
+    prediction_id=body.get("prediction_id")
+    history=body.get("history") or []
+    client_context=body.get("context") or {}
+
+    context={}
+    if prediction_id:
+        item=next((entry for entry in SESSION_HISTORY if entry["id"]==prediction_id),None)
+        if item:
+            context=dict(item)
+
+    for k,v in client_context.items():
+        if v is not None and (k not in context or not context[k]):
+            context[k]=v
+
+    try:
+        reply=answer_chat_query(message=message,history=history,context=context)
+        return jsonify({"reply":reply}),200
+
+    except Exception as exc:
+        logger.exception("Gemini chat query failed")
+        error_text=str(exc).lower()
+        status_code=getattr(exc,"status_code",None)
+        code=getattr(exc,"code",None)
+
+        if status_code==429 or code==429 or "429" in error_text or "resource_exhausted" in error_text:
+            return jsonify({
+                "error":"GEMINI_QUOTA_EXCEEDED",
+                "message":"Kuota Gemini AI telah habis. Silakan coba kembali setelah kuota diperbarui."
+            }),429
+
+        return jsonify({
+            "error":"GEMINI_FAILED",
+            "message":"Gemini AI gagal memproses jawaban. Silakan coba kembali."
         }),502
 
 @app.get("/api/history")

@@ -43,22 +43,20 @@ export default function HistoryTable({ rows }) {
           <button
             type="button"
             onClick={() => setFilter("all")}
-            className={`rounded-lg px-3.5 py-1.5 font-bold transition-all ${
-              filter === "all"
+            className={`rounded-lg px-3.5 py-1.5 font-bold transition-all ${filter === "all"
                 ? "bg-black text-white shadow-sm"
                 : "border border-neutral-200 bg-white text-neutral-600 hover:text-black"
-            }`}
+              }`}
           >
             Semua ({rows.length})
           </button>
           <button
             type="button"
             onClick={() => setFilter("TB")}
-            className={`flex items-center gap-1 rounded-lg px-3.5 py-1.5 font-bold transition-all ${
-              filter === "TB"
+            className={`flex items-center gap-1 rounded-lg px-3.5 py-1.5 font-bold transition-all ${filter === "TB"
                 ? "bg-black text-white shadow-sm"
                 : "border border-neutral-200 bg-white text-neutral-600 hover:text-black"
-            }`}
+              }`}
           >
             <AlertTriangle className="h-3.5 w-3.5" />
             TB ({tbCount})
@@ -66,11 +64,10 @@ export default function HistoryTable({ rows }) {
           <button
             type="button"
             onClick={() => setFilter("Normal")}
-            className={`flex items-center gap-1 rounded-lg px-3.5 py-1.5 font-bold transition-all ${
-              filter === "Normal"
+            className={`flex items-center gap-1 rounded-lg px-3.5 py-1.5 font-bold transition-all ${filter === "Normal"
                 ? "bg-black text-white shadow-sm"
                 : "border border-neutral-200 bg-white text-neutral-600 hover:text-black"
-            }`}
+              }`}
           >
             <ShieldCheck className="h-3.5 w-3.5" />
             Normal ({normalCount})
@@ -107,11 +104,11 @@ export default function HistoryTable({ rows }) {
             {filteredRows.map((row) => {
               const created = row.created_at
                 ? new Date(row.created_at).toLocaleString("id-ID", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    day: "2-digit",
-                    month: "short",
-                  })
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  day: "2-digit",
+                  month: "short",
+                })
                 : "—";
               const label = row.label || row.predicted_label || "—";
               const isTb = label === "TB";
@@ -132,11 +129,10 @@ export default function HistoryTable({ rows }) {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-bold uppercase text-[10px] ${
-                        isTb
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-bold uppercase text-[10px] ${isTb
                           ? "bg-black text-white"
                           : "border border-black bg-white text-black"
-                      }`}
+                        }`}
                     >
                       {isTb ? <AlertTriangle className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />}
                       {label}

@@ -107,6 +107,57 @@ def compute_gradcam(
     return overlay_uint8, heatmap
 
 
+def analyze_gradcam_heatmap(heatmap: np.ndarray) -> dict:
+    """Analyze spatial distribution of Grad-CAM activations across thoracic lung zones."""
+    h, w = heatmap.shape
+    y1, y2 = h // 3, (2 * h) // 3
+    mid_x = w // 2
+
+    # Standard PA Chest X-Ray orientation:
+    # Patient right lung is on the left side of the image
+    # Patient left lung is on the right side of the image
+    zones = {
+        "Lapang Atas Paru Kanan (Right Upper Lung Zone)": heatmap[0:y1, 0:mid_x],
+        "Lapang Tengah Paru Kanan (Right Mid Lung Zone)": heatmap[y1:y2, 0:mid_x],
+        "Lapang Bawah Paru Kanan (Right Lower Lung Zone)": heatmap[y2:h, 0:mid_x],
+        "Lapang Atas Paru Kiri (Left Upper Lung Zone)": heatmap[0:y1, mid_x:w],
+        "Lapang Tengah Paru Kiri (Left Mid Lung Zone)": heatmap[y1:y2, mid_x:w],
+        "Lapang Bawah Paru Kiri (Left Lower Lung Zone)": heatmap[y2:h, mid_x:w],
+    }
+
+    zone_stats = []
+    for name, patch in zones.items():
+        if patch.size == 0:
+            continue
+        max_val = float(patch.max())
+        mean_val = float(patch.mean())
+        coverage = float((patch > 0.5).mean())
+        zone_stats.append({
+            "zone": name,
+            "max_intensity": round(max_val, 3),
+            "mean_intensity": round(mean_val, 3),
+            "coverage": round(coverage, 3),
+        })
+
+    zone_stats.sort(key=lambda z: (z["max_intensity"], z["coverage"]), reverse=True)
+    primary_zone = zone_stats[0]["zone"] if zone_stats else "Area tidak spesifik"
+    primary_max = zone_stats[0]["max_intensity"] if zone_stats else 0.0
+    overall_high_ratio = float((heatmap > 0.5).mean())
+
+    summary = (
+        f"Fokus atensi tertinggi berada di {primary_zone} dengan intensitas puncak {primary_max:.1%}. "
+        f"Sekitar {overall_high_ratio:.1%} area lapang pandang memiliki aktivasi fitur signifikan."
+    )
+
+    return {
+        "primary_zone": primary_zone,
+        "primary_max": primary_max,
+        "high_activation_coverage": round(overall_high_ratio, 3),
+        "zones": zone_stats,
+        "summary": summary
+    }
+
+
 def overlay_to_data_url(overlay_rgb: np.ndarray) -> str:
     image = Image.fromarray(overlay_rgb)
     buffer = BytesIO()
@@ -122,3 +173,14 @@ def generate_gradcam_data_url(
 ) -> str:
     overlay, _ = compute_gradcam(bundle, image, target_index=target_index)
     return overlay_to_data_url(overlay)
+
+
+def generate_gradcam_result(
+    bundle: ModelBundle,
+    image: Image.Image,
+    target_index: int | None = None,
+) -> tuple[str, dict]:
+    """Return both Grad-CAM overlay data URL and spatial heatmap analysis."""
+    overlay, heatmap = compute_gradcam(bundle, image, target_index=target_index)
+    analysis = analyze_gradcam_heatmap(heatmap)
+    return overlay_to_data_url(overlay), analysis
