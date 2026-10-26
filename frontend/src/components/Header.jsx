@@ -1,6 +1,6 @@
-import { Sparkles } from "lucide-react";
+import { Sparkles, LogOut, User } from "lucide-react";
 
-export default function Header({ health, page }) {
+export default function Header({ health, page, currentUser, onLogout }) {
   const online = health?.ok;
   const device = health?.device ? health.device.toUpperCase() : "CPU";
 
@@ -46,7 +46,7 @@ export default function Header({ health, page }) {
         {/* Right Status & Action */}
         <div className="flex items-center gap-3">
           {/* Health indicator badge */}
-          <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-800">
+          <div className="hidden sm:flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-800">
             <span className="relative flex h-2 w-2">
               {online ? (
                 <>
@@ -64,11 +64,35 @@ export default function Header({ health, page }) {
 
           <a
             href="#/classification"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-black px-4 py-2 text-xs font-semibold text-white transition-all duration-200 hover:bg-neutral-800 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-black px-3.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:bg-neutral-800 active:scale-95"
           >
             <Sparkles className="h-3.5 w-3.5" />
             <span>Mulai Uji</span>
           </a>
+
+          {/* User Profile & Logout */}
+          {currentUser && (
+            <div className="flex items-center gap-2 border-l border-neutral-200 pl-3">
+              <div className="hidden flex-col items-end sm:flex">
+                <span className="text-xs font-bold text-neutral-900 leading-tight">
+                  @{currentUser.username}
+                </span>
+                <span className="text-[10px] text-neutral-500 leading-tight">
+                  {currentUser.role || "Klinisi"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onLogout}
+                title="Keluar dari sistem"
+                aria-label="Keluar dari sistem"
+                className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100 hover:text-black"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Keluar</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
       <nav aria-label="Mobile navigation" className="flex items-center justify-center gap-7 border-t border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-600 md:hidden">

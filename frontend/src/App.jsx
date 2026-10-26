@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
+import LandingPage from "./components/LandingPage.jsx";
 import ImageUploadDropzone from "./components/ImageUploadDropzone.jsx";
 import PredictionResultCard from "./components/PredictionResultCard.jsx";
 import GradCAMViewer from "./components/GradCAMViewer.jsx";
@@ -10,6 +11,7 @@ import HistoryTable from "./components/HistoryTable.jsx";
 import CxrEducationSection from "./components/CxrEducationSection.jsx";
 import { fetchApiHistory, getHealth, predictCxr, interpretCxr } from "./services/api.js";
 import { fetchExamHistory, insertExamHistory, supabaseConfigured } from "./services/supabase.js";
+import { getStoredUser, signOut } from "./services/auth.js";
 import { Cpu, Sparkles, Activity, ShieldCheck, ArrowRight, Layers, BookOpen } from "lucide-react";
 
 function getPage() {
@@ -27,6 +29,7 @@ function getPage() {
 }
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(getStoredUser);
   const [page, setPage] = useState(getPage);
   const [health, setHealth] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -37,6 +40,11 @@ export default function App() {
   const [preview, setPreview] = useState("");
   const [history, setHistory] = useState([]);
   const requestId = useRef(0);
+
+  const handleLogout = useCallback(async () => {
+    await signOut();
+    setCurrentUser(null);
+  }, []);
 
   useEffect(() => {
     function navigate() {
@@ -156,9 +164,25 @@ export default function App() {
     }
   }
 
+  if (!currentUser) {
+    return (
+      <LandingPage
+        health={health}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-white text-neutral-900 selection:bg-black selection:text-white">
-      <Header health={health} page={page} />
+      <Header
+        health={health}
+        page={page}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
 
       <main className="flex-1">
         <div hidden={page !== "home"}>
