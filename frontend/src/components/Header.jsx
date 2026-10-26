@@ -78,7 +78,6 @@ export default function Header({ health, page, currentUser, onLogout }) {
                   @{currentUser.username}
                 </span>
                 <span className="text-[10px] text-neutral-500 leading-tight">
-                  {currentUser.role || "Klinisi"}
                 </span>
               </div>
               <button

@@ -98,10 +98,6 @@ export default function GradCAMViewer({ originalUrl, overlayUrl }) {
                 <span className="font-semibold text-black">
                   Citra Chest X-Ray Asli
                 </span>
-
-                <span className="text-neutral-500">
-                  Input Radiografi
-                </span>
               </figcaption>
 
             </figure>
@@ -121,10 +117,6 @@ export default function GradCAMViewer({ originalUrl, overlayUrl }) {
               <figcaption className="flex items-center justify-between border-t border-neutral-200 bg-neutral-100 px-4 py-3 text-xs">
                 <span className="font-semibold text-black">
                   Overlay Grad-CAM
-                </span>
-
-                <span className="text-neutral-500">
-                  Feature Map ResNet-50
                 </span>
               </figcaption>
 

@@ -61,20 +61,6 @@ export default function ClinicalChatbot({ result }) {
   const isTB = result?.label?.toLowerCase().includes("tuberculosis") || result?.label === "TB";
   const confidencePercent = result?.confidence ? `${(result.confidence * 100).toFixed(1)}%` : "";
 
-  const suggestedQuestions = isTB
-    ? [
-      `Mengapa model memprediksi TB (${confidencePercent})?`,
-      "Jelaskan area fokus dan arti warna pada visualisasi Grad-CAM ini",
-      "Apa pemeriksaan mikrobiologis konfirmasi yang dianjurkan?",
-      "Bagaimana peran sirkuit kuantum 6-qubit QORA dalam klasifikasi?"
-    ]
-    : [
-      `Apa dasar model mengklasifikasikan paru ini Normal (${confidencePercent})?`,
-      "Jelaskan visualisasi atensi Grad-CAM pada paru normal ini",
-      "Apakah tetap perlu evaluasi klinis lanjutan jika pasien bergejala?",
-      "Bagaimana cara kerja arsitektur Hybrid QCNN QORA?"
-    ];
-
   async function handleSend(textToSend) {
     const query = (typeof textToSend === "string" ? textToSend : input).trim();
     if (!query || loading) return;
@@ -175,15 +161,12 @@ export default function ClinicalChatbot({ result }) {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-black">Tanya AI Klinis QORA</h3>
+              <h3 className="text-base font-bold text-black">Chatbot QORA</h3>
               <span className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-800">
                 <Sparkles className="h-3 w-3 text-black" />
                 Gemini Connected
               </span>
             </div>
-            <p className="text-xs text-neutral-500">
-              Terhubung ke hasil klasifikasi, Grad-CAM, & panduan TB/Normal
-            </p>
           </div>
         </div>
 
@@ -211,43 +194,6 @@ export default function ClinicalChatbot({ result }) {
 
       {!isCollapsed && (
         <>
-          {/* Context Badges Bar */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-neutral-100 bg-neutral-50/80 px-5 py-2.5 text-xs">
-            <span className="font-semibold text-neutral-500">Konteks Aktif:</span>
-            <span className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 py-0.5 text-[11px] font-bold text-black">
-              <span className={`h-1.5 w-1.5 rounded-full ${isTB ? "bg-red-500" : "bg-emerald-500"}`} />
-              {result?.label || "N/A"} ({confidencePercent})
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 py-0.5 text-[11px] font-medium text-neutral-700">
-              <Layers className="h-3 w-3 text-neutral-500" />
-              Grad-CAM Active
-            </span>
-            {result?.gradcam_analysis?.primary_zone && (
-              <span className="hidden truncate rounded-md border border-neutral-200 bg-white px-2 py-0.5 text-[11px] text-neutral-600 md:inline-block max-w-[260px]">
-                🎯 {result.gradcam_analysis.primary_zone}
-              </span>
-            )}
-          </div>
-
-          {/* Quick Suggested Prompt Chips */}
-          <div className="border-b border-neutral-100 bg-white px-5 py-3">
-            <p className="mb-2 text-[11px] font-semibold tracking-wider text-neutral-400 uppercase">
-              Rekomendasi Pertanyaan Klinis:
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {suggestedQuestions.map((q, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSend(q)}
-                  disabled={loading}
-                  className="rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-left text-xs font-medium text-neutral-700 transition-all hover:border-black hover:bg-neutral-100 active:scale-98 disabled:opacity-50"
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Message Thread */}
           <div className="flex max-h-[420px] min-h-[220px] flex-col gap-4 overflow-y-auto p-5 text-sm leading-relaxed scroll-smooth">
             {messages.map((msg, index) => {
@@ -265,8 +211,8 @@ export default function ClinicalChatbot({ result }) {
 
                   <div
                     className={`group relative max-w-[85%] rounded-2xl px-4 py-3 sm:max-w-[80%] ${isUser
-                        ? "bg-black text-white rounded-br-none"
-                        : "border border-neutral-200 bg-neutral-50/80 text-neutral-800 rounded-bl-none"
+                      ? "bg-black text-white rounded-br-none"
+                      : "border border-neutral-200 bg-neutral-50/80 text-neutral-800 rounded-bl-none"
                       }`}
                   >
                     {isUser ? (
@@ -358,7 +304,7 @@ export default function ClinicalChatbot({ result }) {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Tanyakan temuan CXR, Grad-CAM, atau penanganan TB..."
+                placeholder="Tanyakan di sini..."
                 disabled={loading}
                 className="flex-1 rounded-xl border border-neutral-300 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 transition-all focus:border-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-black disabled:opacity-50"
               />
@@ -373,13 +319,6 @@ export default function ClinicalChatbot({ result }) {
             </form>
 
             {/* Scope / Guardrail Notice */}
-            <div className="mt-2.5 flex items-center justify-between text-[11px] text-neutral-400">
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5 text-neutral-500" />
-                Jawaban dibatasi khusus sistem QORA, citra CXR, Grad-CAM, & kondisi TB/Normal.
-              </span>
-              <span className="hidden sm:inline text-neutral-400">Tekan Enter untuk mengirim</span>
-            </div>
           </div>
         </>
       )}
