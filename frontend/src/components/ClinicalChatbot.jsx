@@ -41,7 +41,7 @@ export default function ClinicalChatbot({ result }) {
 
     const welcomeText =
       `Halo Dokter. Saya asisten klinis AI QORA yang terhubung langsung dengan hasil klasifikasi **${label} (${confidence})** dan analisis atensi **Grad-CAM** untuk citra *${filename}*.\n\n` +
-      `Anda dapat mendiskusikan temuan visual Grad-CAM, probabilitas model, pemeriksaan konfirmasi lanjutan untuk TBC/Normal, atau arsitektur kuantum QORA. Silakan pilih pertanyaan cepat di atas atau ajukan pertanyaan Anda.`;
+      `Apakah ada yang ingin Dokter tanyakan lebih lanjut?`;
 
     setMessages([
       {
@@ -266,7 +266,7 @@ export default function ClinicalChatbot({ result }) {
                     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.15s]" />
                     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400" />
                   </span>
-                  <span className="font-medium text-neutral-600">Gemini sedang menganalisis data CXR & Grad-CAM...</span>
+                  <span className="font-medium text-neutral-600">QORA sedang berpikir...</span>
                 </div>
               </div>
             )}

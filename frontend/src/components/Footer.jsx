@@ -30,12 +30,12 @@ export default function Footer() {
             <ul className="mt-3 space-y-2 text-xs text-neutral-400">
               <li>
                 <a href="#/home" className="transition-colors hover:text-white">
-                  Home
+                  Overview
                 </a>
               </li>
               <li>
                 <a href="#/classification" className="transition-colors hover:text-white">
-                  Classification
+                  Analysis
                 </a>
               </li>
               <li>

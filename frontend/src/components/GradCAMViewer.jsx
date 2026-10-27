@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Layers, Sliders } from "lucide-react";
 
-export default function GradCAMViewer({ originalUrl, overlayUrl }) {
+export default function GradCAMViewer({ originalUrl, overlayUrl, error }) {
   const [viewMode, setViewMode] = useState("side-by-side");
   const [opacity, setOpacity] = useState(65);
 
-  if (!originalUrl && !overlayUrl) {
+  if (error || !originalUrl || !overlayUrl) {
     return (
       <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 p-8 text-center">
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-neutral-300 bg-white">
@@ -17,8 +17,9 @@ export default function GradCAMViewer({ originalUrl, overlayUrl }) {
         </p>
 
         <p className="mt-1 text-xs text-neutral-500">
-          Visualisasi Grad-CAM akan ditampilkan setelah proses klasifikasi
-          Chest X-Ray selesai.
+          {error
+            ? "Visualisasi Grad-CAM tidak ditampilkan karena analisis citra gagal."
+            : "Visualisasi Grad-CAM akan ditampilkan setelah proses klasifikasi Chest X-Ray selesai."}
         </p>
       </div>
     );

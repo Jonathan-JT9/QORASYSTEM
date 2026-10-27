@@ -25,12 +25,6 @@ export default function CxrEducationSection() {
         {/* Section Header */}
         <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-neutral-100 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-black">
-              <BookOpen className="h-3.5 w-3.5 text-black" />
-              <span>Modul Edukasi Radiologi</span>
-              <span className="text-neutral-300">|</span>
-              <span className="text-neutral-600">Panduan CXR</span>
-            </div>
 
             <h2 className="mt-4 text-3xl font-black tracking-tight text-black sm:text-4xl">
               Memahami Radiograf Toraks: <br className="hidden sm:inline" />
@@ -51,8 +45,8 @@ export default function CxrEducationSection() {
               onClick={() => setActiveTab("normal")}
               aria-pressed={activeTab === "normal"}
               className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 transition-all ${activeTab === "normal"
-                  ? "bg-black text-white shadow-sm"
-                  : "text-neutral-600 hover:text-black"
+                ? "bg-black text-white shadow-sm"
+                : "text-neutral-600 hover:text-black"
                 }`}
             >
               <CheckCircle2 className="h-4 w-4" />
@@ -64,8 +58,8 @@ export default function CxrEducationSection() {
               onClick={() => setActiveTab("tb")}
               aria-pressed={activeTab === "tb"}
               className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 transition-all ${activeTab === "tb"
-                  ? "bg-black text-white shadow-sm"
-                  : "text-neutral-600 hover:text-black"
+                ? "bg-black text-white shadow-sm"
+                : "text-neutral-600 hover:text-black"
                 }`}
             >
               <AlertTriangle className="h-4 w-4" />
@@ -77,8 +71,8 @@ export default function CxrEducationSection() {
               onClick={() => setActiveTab("both")}
               aria-pressed={activeTab === "both"}
               className={`hidden items-center gap-1.5 rounded-lg px-3.5 py-2 transition-all lg:flex ${activeTab === "both"
-                  ? "bg-black text-white shadow-sm"
-                  : "text-neutral-600 hover:text-black"
+                ? "bg-black text-white shadow-sm"
+                : "text-neutral-600 hover:text-black"
                 }`}
             >
               <Columns className="h-4 w-4" />

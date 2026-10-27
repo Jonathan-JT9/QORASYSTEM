@@ -11,20 +11,27 @@ function ensureSupabaseConfigured() {
   }
 }
 
+
 function normalizeUser(user) {
   const metadata = user.user_metadata || {};
+
+  // Pertahankan kapitalisasi yang tersimpan pada metadata.
   const username =
-    metadata.username || user.email?.split("@")[0] || "user";
+    metadata.username ||
+    user.email?.split("@")[0] ||
+    "user";
+
+  const name =
+    metadata.display_name ||
+    metadata.full_name ||
+    metadata.name ||
+    username;
 
   return {
     id: user.id,
     email: user.email,
     username,
-    name:
-      metadata.display_name ||
-      metadata.full_name ||
-      metadata.name ||
-      username,
+    name,
     loggedInAt: new Date().toISOString(),
   };
 }
@@ -54,7 +61,7 @@ export async function signUp({ email, username, password }) {
   ensureSupabaseConfigured();
 
   const cleanEmail = (email || "").trim().toLowerCase();
-  const cleanUsername = (username || "").trim().toLowerCase();
+  const cleanUsername = (username || "").trim();
   const cleanPassword = password || "";
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {

@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
@@ -9,10 +10,30 @@ import InterpretationBox from "./components/InterpretationBox.jsx";
 import ClinicalChatbot from "./components/ClinicalChatbot.jsx";
 import HistoryTable from "./components/HistoryTable.jsx";
 import CxrEducationSection from "./components/CxrEducationSection.jsx";
-import { fetchApiHistory, getHealth, predictCxr, interpretCxr } from "./services/api.js";
-import { fetchExamHistory, insertExamHistory, supabaseConfigured } from "./services/supabase.js";
+import {
+  fetchApiHistory,
+  getHealth,
+  predictCxr,
+  interpretCxr,
+} from "./services/api.js";
+import {
+  fetchExamHistory,
+  insertExamHistory,
+  supabaseConfigured,
+} from "./services/supabase.js";
 import { getStoredUser, signOut } from "./services/auth.js";
-import { Cpu, Sparkles, Activity, ShieldCheck, ArrowRight, Layers, BookOpen } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  ArrowUpRight,
+  BookOpen,
+  CheckCircle2,
+  Clock3,
+  Layers,
+  ScanLine,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 
 function getPage() {
   switch (window.location.hash) {
@@ -28,6 +49,39 @@ function getPage() {
   }
 }
 
+function PageHeading({ eyebrow, title, description, action }) {
+  return (
+    <div className="qora-page-heading">
+      <div>
+        <div className="qora-eyebrow qora-eyebrow-muted">
+          <span className="qora-eyebrow-mark" />
+          {eyebrow}
+        </div>
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </div>
+      {action ? (
+        <div className="qora-page-heading-action">{action}</div>
+      ) : null}
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, detail }) {
+  return (
+    <div className="qora-stat-card">
+      <div className="qora-stat-icon">
+        <Icon size={17} strokeWidth={1.8} />
+      </div>
+      <div className="qora-stat-copy">
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <small>{detail}</small>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(getStoredUser);
   const [page, setPage] = useState(getPage);
@@ -37,8 +91,10 @@ export default function App() {
   const [error, setError] = useState("");
   const [interpretError, setInterpretError] = useState("");
   const [result, setResult] = useState(null);
+  const [previewName, setPreviewName] = useState("");
   const [preview, setPreview] = useState("");
   const [history, setHistory] = useState([]);
+  const replacementFileInput = useRef(null);
   const requestId = useRef(0);
 
   const handleLogout = useCallback(async () => {
@@ -50,6 +106,7 @@ export default function App() {
     function navigate() {
       setPage(getPage());
     }
+
     window.addEventListener("hashchange", navigate);
     return () => window.removeEventListener("hashchange", navigate);
   }, []);
@@ -90,6 +147,7 @@ export default function App() {
     setInterpreting(false);
     setBusy(true);
     setPreview(URL.createObjectURL(file));
+    setPreviewName(file.name);
 
     let data;
 
@@ -110,7 +168,6 @@ export default function App() {
       }
 
       await refreshHistory();
-
     } catch (err) {
       if (currentRequest !== requestId.current) return;
 
@@ -118,7 +175,7 @@ export default function App() {
         err.response?.data?.message ||
         err.response?.data?.error ||
         err.message ||
-        "Prediksi gagal dieksekusi"
+        "Prediksi gagal dieksekusi",
       );
 
       setBusy(false);
@@ -138,13 +195,12 @@ export default function App() {
         throw new Error("Gemini tidak mengembalikan interpretasi.");
       }
 
-      setResult(prev => {
+      setResult((prev) => {
         if (!prev || prev.id !== data.id) return prev;
         return { ...prev, interpretation: response.interpretation };
       });
 
       await refreshHistory();
-
     } catch (err) {
       if (currentRequest !== requestId.current) return;
 
@@ -152,11 +208,10 @@ export default function App() {
         err.response?.data?.message ||
         err.response?.data?.error ||
         err.message ||
-        "Interpretasi Gemini AI gagal."
+        "Interpretasi Gemini AI gagal.",
       );
 
       console.error("Gemini interpretation error:", err);
-
     } finally {
       if (currentRequest === requestId.current) {
         setInterpreting(false);
@@ -168,15 +223,23 @@ export default function App() {
     return (
       <LandingPage
         health={health}
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-        }}
+        onLoginSuccess={(user) => setCurrentUser(user)}
       />
     );
   }
 
+  const tbCount = history.filter(
+    (row) => (row.label || row.predicted_label) === "TB",
+  ).length;
+
+  const normalCount = history.filter(
+    (row) => (row.label || row.predicted_label) === "Normal",
+  ).length;
+
+  const online = Boolean(health?.ok);
+
   return (
-    <div className="flex min-h-screen flex-col bg-white text-neutral-900 selection:bg-black selection:text-white">
+    <div className="qora-app min-h-screen text-neutral-900 selection:bg-black selection:text-white">
       <Header
         health={health}
         page={page}
@@ -184,131 +247,107 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      <main className="flex-1">
-        <div hidden={page !== "home"}>
-          <section id="beranda" aria-label="Home" className="relative border-b border-neutral-200 bg-neutral-50/70 bg-monochrome-grid py-16 sm:py-24">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6">
-              <div className="grid items-center gap-12 lg:grid-cols-12">
-                <div className="lg:col-span-7">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-black shadow-sm">
-                    <span className="flex h-2 w-2 rounded-full bg-black" />
-                    <span>Quantum Diagnostic Pipeline</span>
-                    <span className="text-neutral-300">|</span>
-                    <span className="text-neutral-600">HQCNN v1.0</span>
-                  </div>
-
-                  <h1 className="mt-5 text-4xl font-black tracking-tight text-black sm:text-5xl lg:text-6xl">
-                    Quantum-Optimized <br />
-                    <span className="text-neutral-900">Radiograph Analysis</span>
-                  </h1>
-
-                  <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-600 sm:text-lg">
-                    Klasifikasi citra Chest X-Ray ke dalam kategori Tuberkulosis (TB) dan Normal
-                    menggunakan arsitektur hibrida CNN + Sirkuit Kuantum
-                    Variasional 6-qubit PennyLane, peta atensi Grad-CAM, dan
-                    sintesis klinis Google Gemini 3.5 Flash.
-                  </p>
-
-                  <div className="mt-8 flex flex-wrap items-center gap-4">
-                    <a href="#/classification" className="inline-flex items-center gap-2 rounded-xl bg-black px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-neutral-800 active:scale-98">
-                      <Sparkles className="h-4 w-4" />
-                      <span>Mulai Analisis CXR</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </a>
-
-                    <a href="#edukasi" className="inline-flex items-center gap-2 rounded-xl border border-neutral-300 bg-white px-5 py-3.5 text-sm font-bold text-neutral-700 shadow-sm transition-all duration-200 hover:border-black hover:text-black hover:bg-neutral-50">
-                      <BookOpen className="h-4 w-4 text-black" />
-                      <span>Edukasi CXR</span>
-                    </a>
-
-                    <a href="#/history" className="inline-flex items-center gap-2 rounded-xl border border-neutral-300 bg-white px-6 py-3.5 text-sm font-bold text-black shadow-sm transition-all duration-200 hover:border-black hover:bg-neutral-50">
-                      <Activity className="h-4 w-4 text-black" />
-                      <span>Riwayat Sesi</span>
-                    </a>
-                  </div>
+      <main className="qora-main">
+        {/* HOME */}
+        <div hidden={page !== "home"} className="qora-home-view">
+          <section className="qora-hero-section">
+            <div className="qora-container qora-hero-grid">
+              <div className="qora-hero-copy">
+                <div className="qora-eyebrow">
+                  <span className="qora-live-dot" />
+                  Clinical imaging intelligence
+                  <span className="qora-eyebrow-divider">/</span>
+                  <span className="qora-eyebrow-sub">QORA · HQCNN</span>
                 </div>
 
-                <div className="lg:col-span-5">
-                  <div className="relative mx-auto max-w-md rounded-2xl border-2 border-black bg-black p-6 text-white shadow-2xl">
-                    <div className="relative overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-6 text-center">
-                      <img src="/logo-transparent.png" alt="QORA Master Logo" className="mx-auto h-20 w-auto object-contain transition-transform duration-500 hover:scale-105" />
+                <h1>
+                  Quantum Optimized Radiograph Analysis
+                </h1>
 
-                      <div className="mt-5 border-t border-neutral-800 pt-3">
-                        <p className="text-xs font-bold tracking-wider text-neutral-300 uppercase">
-                          Arsitektur Jaringan Saraf Kuantum Hibrida
-                        </p>
-                        <p className="mt-1 text-[11px] text-neutral-500">
-                          ResNet-50 + 6-Qubit VQC + Grad-CAM + Gemini 3.5
-                        </p>
-                      </div>
-                    </div>
+                <p className="qora-hero-description">
+                  Satu ruang kerja untuk klasifikasi CXR, visualisasi Grad-CAM,
+                  dan interpretasi pendukung klinis—dirancang agar setiap tahap
+                  analisis terasa jelas, terstruktur, dan mudah ditinjau.
+                </p>
 
-                    <div className="mt-3.5 grid grid-cols-2 gap-2 text-center text-xs">
-                      <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-2.5">
-                        <span className="block font-bold text-white">6 Qubits</span>
-                        <span className="text-[10px] text-neutral-400">
-                          Entangled VQC Layer
-                        </span>
-                      </div>
+                <div className="qora-hero-actions">
+                  <a
+                    href="#/classification"
+                    className="qora-button qora-button-dark"
+                  >
+                    <ScanLine size={16} />
+                    Mulai analisis
+                    <ArrowRight size={16} />
+                  </a>
 
-                      <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-2.5">
-                        <span className="block font-bold text-white">ResNet-50</span>
-                        <span className="text-[10px] text-neutral-400">
-                          Deep CNN Backbone
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <a
+                    href="#edukasi"
+                    className="qora-button qora-button-light"
+                  >
+                    <BookOpen size={16} />
+                    Jelajahi edukasi CXR
+                  </a>
                 </div>
               </div>
 
-              <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm transition-all hover:border-black">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-black border border-neutral-200">
-                      <Cpu className="h-4 w-4" />
+              <div className="qora-hero-visual-wrap">
+                <div className="qora-hero-visual">
+                  <div className="qora-visual-topline">
+                    <span>QORA / IMAGING WORKSPACE</span>
+                    <span>01 — 03</span>
+                  </div>
+
+                  <div className="qora-xray-frame">
+                    <img
+                      src="/education-normal.png"
+                      alt="Contoh radiograf toraks untuk tampilan referensi"
+                    />
+                    <div className="qora-xray-vignette" />
+                    <div className="qora-xray-crosshair qora-crosshair-one" />
+                    <div className="qora-xray-crosshair qora-crosshair-two" />
+
+                    <div className="qora-xray-label qora-xray-label-top">
+                      <span className="qora-label-dot" />
+                      REFERENCE IMAGE
                     </div>
+
+                    <div className="qora-xray-label qora-xray-label-bottom">
+                      <span>CHEST</span>
+                      <strong>PA / AP VIEW</strong>
+                    </div>
+                  </div>
+
+                  <div className="qora-visual-footer">
                     <div>
-                      <h4 className="text-xs font-bold text-black">Quantum VQC 6-Qubit</h4>
-                      <p className="text-[11px] text-neutral-500">PennyLane Strong Entanglement</p>
+                      <span className="qora-visual-overline">
+                        IMAGING INTELLIGENCE
+                      </span>
+                      <strong>One image. A clearer workflow.</strong>
+                    </div>
+                    <div className="qora-visual-arrow">
+                      <ArrowUpRight size={18} />
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm transition-all hover:border-black">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-black border border-neutral-200">
-                      <Layers className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-black">Explainable Grad-CAM</h4>
-                      <p className="text-[11px] text-neutral-500">Visualisasi kontribusi fitur model</p>
-                    </div>
-                  </div>
+                <div className="qora-floating-note qora-floating-note-top">
+                  <span className="qora-floating-icon">
+                    <Layers size={15} />
+                  </span>
+                  <span>
+                    <strong>Explainable AI</strong>
+                    <small>Grad-CAM visualization</small>
+                  </span>
                 </div>
 
-                <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm transition-all hover:border-black">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-black border border-neutral-200">
-                      <Sparkles className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-black">Google Gemini 3.5 Flash</h4>
-                      <p className="text-[11px] text-neutral-500">Sintesis narasi klinis terstruktur</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm transition-all hover:border-black">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-black border border-neutral-200">
-                      <ShieldCheck className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-black">Verifikasi Terintegrasi</h4>
-                      <p className="text-[11px] text-neutral-500">Log riwayat sesi otomatis</p>
-                    </div>
-                  </div>
+                <div className="qora-floating-note qora-floating-note-bottom">
+                  <span className="qora-floating-icon qora-floating-icon-dark">
+                    <Sparkles size={15} />
+                  </span>
+                  <span>
+                    <strong>Clinical summary</strong>
+                    <small>AI-assisted interpretation</small>
+                  </span>
                 </div>
               </div>
             </div>
@@ -317,93 +356,337 @@ export default function App() {
           <CxrEducationSection />
         </div>
 
-        {/* Keep page contents mounted so navigation preserves uploads and view settings. */}
-        <div hidden={page !== "classification"} aria-label="Classification" className="mx-auto w-full max-w-7xl space-y-16 px-4 py-12 sm:px-6">
-          <section id="analisis" className="scroll-mt-24 space-y-4">
-            <div className="flex flex-col gap-2 border-b border-neutral-200 pb-3 sm:flex-row sm:items-end sm:justify-between">
+        {/* CLASSIFICATION */}
+        <div
+          hidden={page !== "classification"}
+          aria-label="Classification"
+          className="qora-container qora-page-content"
+        >
+          <PageHeading
+            title="Chest X-Ray analysis"
+            description="Unggah citra, tinjau hasil klasifikasi, lalu evaluasi penjelasan visual dan interpretasi pendukung klinis."
+          />
+
+          <div className="qora-workflow-steps" aria-label="Alur analisis">
+            <div className="qora-workflow-step is-current">
+              <span>01</span>
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Langkah 1</span>
-                <h2 className="text-2xl font-bold tracking-tight text-black">
-                  Unggah & Analisis Citra Rontgen CXR
-                </h2>
-                <p className="mt-1 text-xs text-neutral-600">
-                  Pilih foto rontgen dada (CXR) dalam format citra, sistem akan
-                  mengekstrak fitur dan mengevaluasi sirkuit kuantum.
-                </p>
+                <strong>Upload image</strong>
+                <small>Input radiograf</small>
               </div>
             </div>
 
-            <ImageUploadDropzone onFile={handleFile} disabled={busy} />
+            <div className="qora-workflow-connector" />
 
-            {busy && (
-              <div className="flex items-center justify-center gap-3 rounded-xl border border-black bg-neutral-100 p-4 text-sm font-semibold text-black">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent" />
-                <span>Memproses inferensi HQCNN dan mengekstrak Grad-CAM...</span>
+            <div className={`qora-workflow-step ${result ? "is-complete" : ""}`}>
+              <span>
+                {result ? <CheckCircle2 size={16} /> : "02"}
+              </span>
+              <div>
+                <strong>Classification</strong>
+                <small>Hybrid QCNN</small>
               </div>
-            )}
-
-            {error && (
-              <div className="rounded-xl border-2 border-black bg-neutral-100 p-4 text-sm font-semibold text-black">
-                <strong>Gagal:</strong> {error}
-              </div>
-            )}
-          </section>
-
-          <section id="hasil" className="scroll-mt-24 space-y-6">
-            <div className="border-b border-neutral-200 pb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Langkah 2</span>
-              <h2 className="text-2xl font-bold tracking-tight text-black">
-                Hasil Prediksi & Visualisasi Explainable AI
-              </h2>
-              <p className="mt-1 text-xs text-neutral-600">
-                Hasil inferensi jaringan hibrida kuantum, probabilitas per kelas,
-                visualisasi Grad-CAM, dan interpretasi pendukung keputusan klinis.
-              </p>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
-              <PredictionResultCard result={result} />
+            <div className="qora-workflow-connector" />
 
-              <div className="flex flex-col gap-6">
+            <div
+              className={`qora-workflow-step ${result?.interpretation ? "is-complete" : ""
+                }`}
+            >
+              <span>
+                {result?.interpretation ? <CheckCircle2 size={16} /> : "03"}
+              </span>
+              <div>
+                <strong>Clinical review</strong>
+                <small>Grad-CAM & AI</small>
+              </div>
+            </div>
+          </div>
+
+          {/* CLASSIFICATION WORKSPACE SECTIONS */}
+          <div className="qora-classification-sections">
+            {/* 01 INPUT + 02 CLASSIFICATION RESULT */}
+            <div className="qora-analysis-grid">
+              <section className="qora-panel qora-upload-panel">
+                <div className="qora-panel-heading">
+                  <div>
+                    <span className="qora-panel-number">01 / INPUT</span>
+                    <h2>Upload radiograph</h2>
+                    <p>Pilih citra Chest X-Ray untuk memulai inferensi.</p>
+                  </div>
+                  <span className="qora-panel-heading-icon">
+                    <ScanLine size={18} />
+                  </span>
+                </div>
+
+
+                {!preview ? (
+                  <ImageUploadDropzone onFile={handleFile} disabled={busy} />
+                ) : (
+                  <div className={`qora-source-scan ${busy ? "is-scanning" : "is-complete"}`}>
+                    <div className="qora-source-scan-toolbar">
+                      <span>
+                        <CheckCircle2 size={14} />
+                        Source image
+                      </span>
+                      <span className="qora-source-scan-status">
+                        <span className="qora-source-status-dot" />
+                        {busy ? "SCANNING IMAGE" : "IMAGE LOADED"}
+                      </span>
+                    </div>
+
+                    <div className="qora-source-scan-image">
+                      <img
+                        src={preview}
+                        alt={`Source image: ${previewName}`}
+                      />
+
+                      <div className="qora-source-image-overlay" />
+
+                      <div className="qora-source-scan-corner corner-tl" />
+                      <div className="qora-source-scan-corner corner-tr" />
+                      <div className="qora-source-scan-corner corner-bl" />
+                      <div className="qora-source-scan-corner corner-br" />
+
+                      {busy && (
+                        <>
+                          <div className="qora-source-scan-line" />
+                          <div className="qora-source-scan-beam" />
+                          <div className="qora-source-scan-label">
+                            <span className="qora-source-status-dot" />
+                            ANALYZING RADIOGRAPH
+                          </div>
+                        </>
+                      )}
+
+                      {!busy && (
+                        <div className="qora-source-scan-ready">
+                          <CheckCircle2 size={14} />
+                          Source image ready
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="qora-source-scan-footer">
+                      <div className="qora-source-file-info">
+                        <strong title={previewName}>{previewName}</strong>
+                        <span>Chest X-Ray · Source image</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="qora-source-replace-button"
+                        disabled={busy}
+                        onClick={() => replacementFileInput.current?.click()}
+                      >
+                        Ganti citra
+                      </button>
+
+                      <input
+                        ref={replacementFileInput}
+                        type="file"
+                        accept="image/*,.dcm,.dicom"
+                        hidden
+                        disabled={busy}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+
+                          if (file) {
+                            handleFile(file);
+                          }
+
+                          event.target.value = "";
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+
+                {busy && (
+                  <div className="qora-processing-state" role="status">
+                    <span className="qora-processing-spinner" />
+                    <div>
+                      <strong>Analyzing radiograph</strong>
+                      <span>
+                        Menjalankan inferensi HQCNN dan mengekstrak Grad-CAM…
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="qora-inline-error" role="alert">
+                    <strong>Analisis gagal</strong>
+                    <span>{error}</span>
+                  </div>
+                )}
+              </section>
+
+              <section
+                className="qora-results-column"
+                aria-label="Hasil klasifikasi"
+              >
+                <div className="qora-panel qora-result-panel">
+                  <div className="qora-panel-heading">
+                    <div>
+                      <span className="qora-panel-number">02 / OUTPUT</span>
+                      <h2>Classification result</h2>
+                      <p>Probabilitas prediksi dari model.</p>
+                    </div>
+                    <span className="qora-panel-heading-icon">
+                      <Activity size={18} />
+                    </span>
+                  </div>
+
+                  <PredictionResultCard result={result} />
+                </div>
+              </section>
+            </div>
+
+            {/* 03 CLINICAL INTERPRETATION + CHATBOT */}
+            <section
+              className={`qora-review-grid ${result?.interpretation && !interpreting
+                ? "has-chatbot"
+                : "is-single"
+                }`}
+              aria-label="Clinical review"
+            >
+              <section className="qora-panel qora-interpretation-panel qora-interpretation-section">
+                <div className="qora-panel-heading">
+                  <div>
+                    <span className="qora-panel-number">
+                      03 / INTERPRETATION
+                    </span>
+                    <h2>Clinical interpretation</h2>
+                    <p>Ringkasan pendukung keputusan klinis.</p>
+                  </div>
+                  <span className="qora-panel-heading-icon">
+                    <Sparkles size={18} />
+                  </span>
+                </div>
+
                 <InterpretationBox
                   text={result?.interpretation}
                   loading={interpreting}
                 />
 
                 {interpretError && (
-                  <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
-                    <strong>Gemini AI:</strong> {interpretError}
+                  <div className="qora-inline-error" role="alert">
+                    <strong>Interpretasi AI belum tersedia</strong>
+                    <span>{interpretError}</span>
                   </div>
                 )}
+              </section>
 
-                {result?.interpretation && !interpreting && (
+              {result?.interpretation && !interpreting && (
+                <section
+                  className="qora-chatbot-section"
+                  aria-label="Chatbot QORA"
+                >
                   <ClinicalChatbot result={result} />
-                )}
+                </section>
+              )}
+            </section>
+
+            {/* 04 GRAD-CAM */}
+            <section className="qora-panel qora-gradcam-section">
+              <div className="qora-panel-heading">
+                <div>
+                  <span className="qora-panel-number">
+                    EXPLAINABLE AI / XAI
+                  </span>
+                  <h2>Attention map & image review</h2>
+                  <p>
+                    Bandingkan radiograf asli dengan visualisasi Grad-CAM dan
+                    sesuaikan overlay interaktif.
+                  </p>
+                </div>
+                <span className="qora-panel-heading-icon">
+                  <Layers size={18} />
+                </span>
               </div>
-            </div>
 
-            <GradCAMViewer
-              originalUrl={preview}
-              overlayUrl={result?.gradcam_overlay_b64}
-            />
-          </section>
-
+              <GradCAMViewer
+                originalUrl={error ? null : preview}
+                overlayUrl={error ? null : result?.gradcam_overlay_b64}
+                error={error}
+              />
+            </section>
+          </div>
+          {/* End classification workspace sections */}
         </div>
 
-        <div hidden={page !== "history"} aria-label="History" className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6">
-          <section id="riwayat" className="scroll-mt-24 space-y-4">
-            <div className="flex flex-col gap-2 border-b border-neutral-200 pb-3 sm:flex-row sm:items-end sm:justify-between">
+        {/* HISTORY */}
+        <div
+          hidden={page !== "history"}
+          aria-label="History"
+          className="qora-container qora-page-content qora-history-page"
+        >
+          <PageHeading
+            title="Examination history"
+            description={
+              supabaseConfigured
+                ? "Riwayat pemeriksaan tersinkronisasi dengan database Supabase."
+                : "Riwayat pemeriksaan dari sesi server yang tersedia."
+            }
+            action={
+              <a
+                href="#/classification"
+                className="qora-button qora-button-dark"
+              >
+                <ScanLine size={15} />
+                Analisis baru
+                <ArrowRight size={15} />
+              </a>
+            }
+          />
+
+          <div className="qora-history-stats">
+            <StatCard
+              icon={Clock3}
+              label="Total examinations"
+              value={history.length}
+              detail="Recorded sessions"
+            />
+            <StatCard
+              icon={Activity}
+              label="TB classification"
+              value={tbCount}
+              detail="Predicted label: TB"
+            />
+            <StatCard
+              icon={ShieldCheck}
+              label="Normal classification"
+              value={normalCount}
+              detail="Predicted label: Normal"
+            />
+            <StatCard
+              icon={CheckCircle2}
+              label="Storage status"
+              value={supabaseConfigured ? "Synced" : "Local API"}
+              detail={
+                supabaseConfigured
+                  ? "Supabase configured"
+                  : "Fallback history source"
+              }
+            />
+          </div>
+
+          <section className="qora-panel qora-history-panel">
+            <div className="qora-panel-heading">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Langkah 3</span>
-                <h2 className="text-2xl font-bold tracking-tight text-black">
-                  Riwayat Rekam Pemeriksaan
-                </h2>
-                <p className="mt-1 text-xs text-neutral-600">
-                  {supabaseConfigured
-                    ? "Tersinkronisasi secara persisten dengan database Cloud Supabase."
-                    : "Tersimpan pada memori sesi server lokal (Dapat dihubungkan ke Supabase kapan saja)."}
+                <span className="qora-panel-number">SESSION ARCHIVE</span>
+                <h2>Examination records</h2>
+                <p>
+                  Gunakan pencarian dan filter untuk meninjau hasil pemeriksaan
+                  sebelumnya.
                 </p>
               </div>
+              <span className="qora-record-count">
+                {history.length} records
+              </span>
             </div>
 
             <HistoryTable rows={history} />

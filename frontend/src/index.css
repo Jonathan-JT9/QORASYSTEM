@@ -4,53 +4,3835 @@
 
 :root {
   color-scheme: light;
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --qora-ink: #111111;
+  --qora-muted: #6f6f6a;
+  --qora-subtle: #92928d;
+  --qora-line: #e7e7e3;
+  --qora-paper: #fbfbf9;
+  --qora-soft: #f3f3f0;
+  --qora-radius: 22px;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
-}
-
-html,
-body,
-#root {
-  min-height: 100%;
+  background: var(--qora-paper);
 }
 
 body {
-  @apply bg-white text-neutral-900 antialiased selection:bg-black selection:text-white;
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--qora-paper);
+  color: var(--qora-ink);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Subtle monochrome grid effect */
-.bg-monochrome-grid {
-  background-image: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
-/* Clean cards */
-.mono-card {
-  @apply bg-white border border-neutral-200 transition-all duration-200 hover:border-black;
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
 }
 
-.prose-clinical p {
-  @apply mb-3 last:mb-0 leading-relaxed text-neutral-700;
+a {
+  color: inherit;
 }
 
-/* Clean monochrome scrollbars */
+/* Chatbot QORA */
+.qora-chatbot-section {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.qora-chatbot-section>div {
+  width: 100%;
+  min-width: 0;
+  border-color: #e5e5e0 !important;
+  border-radius: 23px !important;
+  box-shadow: 0 5px 22px rgba(0, 0, 0, 0.025) !important;
+}
+
+.qora-chatbot-section>div>div:first-child {
+  padding: 22px 24px !important;
+}
+
+.qora-chatbot-section>div>div:last-child {
+  border-radius: 0 0 23px 23px;
+}
+
+img {
+  max-width: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+::selection {
+  background: #171717;
+  color: white;
+}
+
+/* Shared QORA shell */
+.qora-app {
+  min-height: 100vh;
+  background: var(--qora-paper);
+  color: var(--qora-ink);
+}
+
+.qora-container {
+  width: min(1240px, calc(100% - 56px));
+  margin-inline: auto;
+}
+
+.qora-main {
+  min-height: 65vh;
+}
+
+.qora-app .text-neutral-950 {
+  color: #111 !important;
+}
+
+.qora-app .text-neutral-900 {
+  color: #1b1b1a !important;
+}
+
+.qora-app .text-neutral-800 {
+  color: #292927 !important;
+}
+
+.qora-app .text-neutral-700 {
+  color: #454541 !important;
+}
+
+.qora-app .text-neutral-600 {
+  color: #686863 !important;
+}
+
+.qora-app .text-neutral-500 {
+  color: #777771 !important;
+}
+
+.qora-app .text-neutral-400 {
+  color: #989892 !important;
+}
+
+.qora-app .border-neutral-100 {
+  border-color: #efefec !important;
+}
+
+.qora-app .border-neutral-200 {
+  border-color: #e7e7e3 !important;
+}
+
+.qora-app .border-neutral-300 {
+  border-color: #deded9 !important;
+}
+
+.qora-app .border-neutral-800 {
+  border-color: #30302e !important;
+}
+
+.qora-app .bg-neutral-50 {
+  background-color: #f8f8f6 !important;
+}
+
+.qora-app .bg-neutral-100 {
+  background-color: #f0f0ed !important;
+}
+
+.qora-app .bg-neutral-900 {
+  background-color: #1a1a19 !important;
+}
+
+.qora-app .bg-neutral-950 {
+  background-color: #111 !important;
+}
+
+.qora-app .shadow-sm {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .035) !important;
+}
+
+.qora-app .shadow-md {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .08) !important;
+}
+
+.qora-app .rounded-2xl {
+  border-radius: 22px;
+}
+
+.qora-app .rounded-xl {
+  border-radius: 15px;
+}
+
+.qora-app button {
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+}
+
+.qora-app button:focus-visible,
+.qora-app a:focus-visible,
+.qora-auth button:focus-visible,
+.qora-auth a:focus-visible,
+.qora-auth input:focus-visible {
+  outline: 2px solid #171717;
+  outline-offset: 3px;
+}
+
+.qora-app input[type="range"] {
+  accent-color: #111;
+}
+
+/* Header */
+.qora-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(251, 251, 249, .91);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(20, 20, 20, .08);
+}
+
+.qora-header-inner {
+  width: min(1320px, calc(100% - 48px));
+  min-height: 82px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 26px;
+}
+
+.qora-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.qora-brand-logo {
+  display: grid;
+  place-items: center;
+  width: 100px;
+  height: 42px;
+  padding: 7px 9px;
+  border-radius: 12px;
+  background: #111;
+  overflow: hidden;
+}
+
+.qora-brand-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.qora-brand-copy,
+.qora-auth-brand>span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.qora-brand-copy strong,
+.qora-auth-brand strong {
+  font-size: 12px;
+  letter-spacing: .18em;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.qora-brand-copy small,
+.qora-auth-brand small {
+  color: #858580;
+  font-size: 8px;
+  letter-spacing: .13em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.qora-desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid #ecece8;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .74);
+}
+
+.qora-desktop-nav a {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 17px;
+  border-radius: 999px;
+  color: #777771;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: all .2s ease;
+}
+
+.qora-desktop-nav a:hover {
+  color: #111;
+  background: #f2f2ef;
+}
+
+.qora-desktop-nav a.is-active {
+  color: white;
+  background: #111;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .1);
+}
+
+.qora-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.qora-header-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #888882;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.qora-status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #a5a5a0;
+}
+
+.qora-status-dot.is-online,
+.is-online .qora-status-dot,
+.qora-header-status.is-online .qora-status-dot {
+  background: #1d1d1b;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, .06);
+}
+
+.qora-header-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 39px;
+  padding: 0 13px;
+  border: 1px solid #111;
+  border-radius: 12px;
+  background: #111;
+  color: white;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.qora-header-cta:hover {
+  background: #2a2a28;
+  transform: translateY(-1px);
+}
+
+.qora-user-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid #e7e7e3;
+}
+
+.qora-user-avatar {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border: 1px solid #deded9;
+  border-radius: 50%;
+  background: #ededeb;
+  color: #222;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.qora-user-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 95px;
+}
+
+.qora-user-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #2d2d2a;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.qora-user-copy small {
+  color: #969690;
+  font-size: 9px;
+}
+
+.qora-logout-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #e6e6e2;
+  border-radius: 9px;
+  background: white;
+  color: #6c6c67;
+  cursor: pointer;
+}
+
+.qora-logout-button:hover {
+  border-color: #111;
+  color: #111;
+}
+
+.qora-mobile-nav {
+  display: none;
+}
+
+/* Eyebrows, buttons and headings */
+.qora-eyebrow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  color: #252523;
+  font-size: 9px;
+  line-height: 1.5;
+  font-weight: 800;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.qora-live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #111;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, .07);
+}
+
+.qora-eyebrow-divider {
+  color: #c1c1bc;
+}
+
+.qora-eyebrow-sub {
+  color: #8a8a84;
+}
+
+.qora-eyebrow-muted {
+  color: #777771;
+}
+
+.qora-eyebrow-mark {
+  display: inline-block;
+  width: 17px;
+  height: 1px;
+  background: #1a1a18;
+}
+
+.qora-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 47px;
+  padding: 0 19px;
+  border-radius: 13px;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 750;
+  transition: all .2s ease;
+}
+
+.qora-button-dark {
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, .08);
+}
+
+.qora-button-dark:hover {
+  background: #2a2a28;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .12);
+}
+
+.qora-button-light {
+  border: 1px solid #deded9;
+  background: rgba(255, 255, 255, .8);
+  color: #2b2b28;
+}
+
+.qora-button-light:hover {
+  border-color: #111;
+  background: #fff;
+}
+
+/* Home hero */
+.qora-hero-section {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid #e9e9e5;
+  background: radial-gradient(ellipse at 78% 34%, rgba(0, 0, 0, .045), transparent 31%), linear-gradient(135deg, #fbfbf9 0%, #f6f6f3 100%);
+}
+
+.qora-hero-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .27;
+  background-image: radial-gradient(#bdbdb6 .65px, transparent .65px);
+  background-size: 17px 17px;
+  mask-image: linear-gradient(90deg, #000, transparent 75%);
+}
+
+.qora-hero-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(390px, .86fr);
+  align-items: center;
+  gap: clamp(42px, 7vw, 92px);
+  padding-top: clamp(58px, 7.4vw, 104px);
+  padding-bottom: clamp(68px, 8vw, 112px);
+}
+
+.qora-hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+}
+
+.qora-hero-copy h1 {
+  max-width: 680px;
+  margin: 26px 0 0;
+  color: #111;
+  font-size: clamp(48px, 5.6vw, 78px);
+  font-weight: 740;
+  letter-spacing: -.075em;
+  line-height: .99;
+}
+
+.qora-hero-copy h1 span {
+  display: block;
+  margin-top: 7px;
+  color: #777772;
+  font-weight: 520;
+  letter-spacing: -.078em;
+}
+
+.qora-hero-description {
+  max-width: 520px;
+  margin: 25px 0 0;
+  color: #6d6d67;
+  font-size: 14px;
+  line-height: 1.85;
+}
+
+.qora-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 31px;
+}
+
+.qora-hero-footnote {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 30px;
+  color: #888882;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.qora-hero-footnote .qora-status-dot {
+  background: #b1b1ab;
+}
+
+.qora-hero-footnote .qora-status-dot.is-online {
+  background: #151515;
+}
+
+.qora-footnote-separator {
+  width: 3px;
+  height: 3px;
+  margin: 0 3px;
+  border-radius: 50%;
+  background: #c7c7c1;
+}
+
+.qora-hero-visual-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  justify-self: end;
+  padding: 12px 12px 15px;
+}
+
+.qora-hero-visual {
+  overflow: hidden;
+  border: 1px solid #e1e1dc;
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .09), 0 3px 12px rgba(0, 0, 0, .025);
+  transform: rotate(.7deg);
+}
+
+.qora-visual-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 17px 19px 14px;
+  color: #92928c;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .15em;
+}
+
+.qora-xray-frame {
+  position: relative;
+  height: clamp(300px, 35vw, 430px);
+  overflow: hidden;
+  margin: 0 10px;
+  border-radius: 17px;
+  background: #080808;
+}
+
+.qora-xray-frame>img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: grayscale(1) contrast(1.02);
+  opacity: .92;
+}
+
+.qora-xray-vignette {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .04), transparent 42%, rgba(0, 0, 0, .6)), linear-gradient(90deg, rgba(0, 0, 0, .08), transparent 25%, transparent 75%, rgba(0, 0, 0, .08));
+  pointer-events: none;
+}
+
+.qora-xray-label {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(255, 255, 255, .84);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .14em;
+}
+
+.qora-xray-label-top {
+  top: 16px;
+  left: 16px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .24);
+  backdrop-filter: blur(8px);
+}
+
+.qora-label-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: white;
+}
+
+.qora-xray-label-bottom {
+  right: 17px;
+  bottom: 17px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.qora-xray-label-bottom span {
+  color: rgba(255, 255, 255, .6);
+}
+
+.qora-xray-label-bottom strong {
+  font-size: 10px;
+}
+
+.qora-xray-crosshair {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255, 255, 255, .48);
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, .08);
+}
+
+.qora-xray-crosshair::before,
+.qora-xray-crosshair::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, .6);
+}
+
+.qora-xray-crosshair::before {
+  top: 11px;
+  left: -7px;
+  width: 36px;
+  height: 1px;
+}
+
+.qora-xray-crosshair::after {
+  top: -7px;
+  left: 11px;
+  width: 1px;
+  height: 36px;
+}
+
+.qora-crosshair-one {
+  top: 38%;
+  left: 30%;
+}
+
+.qora-crosshair-two {
+  right: 27%;
+  bottom: 32%;
+  transform: scale(.68);
+}
+
+.qora-visual-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 17px 20px 19px;
+}
+
+.qora-visual-footer>div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.qora-visual-overline {
+  color: #999992;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .15em;
+}
+
+.qora-visual-footer strong {
+  color: #20201e;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.qora-visual-arrow {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f1f1ee;
+  color: #111;
+}
+
+.qora-floating-note {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px 11px 11px;
+  border: 1px solid #e6e6e1;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, .08);
+  backdrop-filter: blur(14px);
+}
+
+.qora-floating-note-top {
+  top: 17%;
+  right: -25px;
+}
+
+.qora-floating-note-bottom {
+  bottom: 12%;
+  left: -35px;
+}
+
+.qora-floating-icon {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 10px;
+  background: #efefec;
+  color: #111;
+}
+
+.qora-floating-icon-dark {
+  background: #111;
+  color: white;
+}
+
+.qora-floating-note>span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.qora-floating-note strong {
+  color: #292926;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.qora-floating-note small {
+  color: #888882;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+/* Capability section */
+.qora-capabilities-section {
+  padding: 76px 0 72px;
+  background: #fbfbf9;
+}
+
+.qora-section-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 40px;
+  margin-bottom: 29px;
+}
+
+.qora-section-intro h2 {
+  margin: 13px 0 0;
+  font-size: clamp(26px, 3vw, 38px);
+  font-weight: 700;
+  letter-spacing: -.055em;
+  line-height: 1.08;
+}
+
+.qora-section-intro>p {
+  max-width: 390px;
+  margin: 0 0 2px;
+  color: #777771;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.qora-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.qora-feature-card {
+  min-height: 230px;
+  padding: 23px 23px 20px;
+  border: 1px solid #e5e5e0;
+  border-radius: 20px;
+  background: #fff;
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+
+.qora-feature-card:hover {
+  transform: translateY(-4px);
+  border-color: #c8c8c2;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .05);
+}
+
+.qora-feature-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.qora-feature-index {
+  color: #a2a29c;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.qora-feature-icon {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  border: 1px solid #e6e6e1;
+  border-radius: 13px;
+  background: #f7f7f5;
+  color: #191918;
+}
+
+.qora-feature-card h3 {
+  margin: 22px 0 8px;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -.025em;
+}
+
+.qora-feature-card p {
+  margin: 0;
+  color: #777771;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.qora-feature-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 17px;
+}
+
+.qora-feature-meta span {
+  padding: 5px 8px;
+  border: 1px solid #e8e8e4;
+  border-radius: 7px;
+  background: #fafaf8;
+  color: #6e6e68;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .02em;
+}
+
+.qora-method-strip {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 15px;
+  padding: 18px 22px;
+  border: 1px solid #e5e5e0;
+  border-radius: 18px;
+  background: #f4f4f1;
+}
+
+.qora-method-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+}
+
+.qora-method-mark {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 11px;
+  background: #111;
+  color: white;
+}
+
+.qora-method-brand>div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.qora-method-brand strong {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.qora-method-brand span {
+  color: #8c8c86;
+  font-size: 9px;
+}
+
+.qora-method-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 20px;
+  border-left: 1px solid #deded8;
+}
+
+.qora-method-item span {
+  color: #999992;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.qora-method-item strong {
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.qora-method-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  color: #292926;
+  font-size: 10px;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.qora-method-link:hover {
+  text-decoration: underline;
+}
+
+/* Workspace pages */
+.qora-page-content {
+  padding-top: 54px;
+  padding-bottom: 86px;
+}
+
+.qora-page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 25px;
+  margin-bottom: 28px;
+}
+
+.qora-page-heading h1 {
+  margin: 13px 0 8px;
+  color: #151514;
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 730;
+  letter-spacing: -.065em;
+  line-height: 1.02;
+}
+
+.qora-page-heading p {
+  max-width: 650px;
+  margin: 0;
+  color: #74746e;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.qora-page-heading-action {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.qora-system-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border: 1px solid #e6e6e1;
+  border-radius: 999px;
+  background: white;
+  color: #8a8a84;
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.qora-system-pill.is-online {
+  color: #33332f;
+}
+
+.qora-system-pill.is-online .qora-status-dot {
+  background: #111;
+}
+
+.qora-workflow-steps {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 26px;
+  padding: 17px 20px;
+  border: 1px solid #e8e8e3;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.qora-workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: #989892;
+}
+
+.qora-workflow-step>span {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  border: 1px solid #e4e4df;
+  border-radius: 50%;
+  color: #888882;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.qora-workflow-step>div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.qora-workflow-step strong {
+  color: #73736d;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.qora-workflow-step small {
+  color: #a0a099;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.qora-workflow-step.is-current>span {
+  border-color: #111;
+  background: #111;
+  color: white;
+}
+
+.qora-workflow-step.is-current strong,
+.qora-workflow-step.is-complete strong {
+  color: #242422;
+}
+
+.qora-workflow-step.is-complete>span {
+  border-color: #111;
+  color: #111;
+}
+
+.qora-workflow-connector {
+  height: 1px;
+  flex: 1 1 auto;
+  min-width: 12px;
+  background: #e6e6e1;
+}
+
+/* Classification input and result grid */
+.qora-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.qora-panel {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #e5e5e0;
+  border-radius: 23px;
+  background: #fff;
+  box-shadow: 0 5px 22px rgba(0, 0, 0, .025);
+}
+
+.qora-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 21px;
+}
+
+.qora-panel-number {
+  display: block;
+  margin-bottom: 8px;
+  color: #999992;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .15em;
+}
+
+.qora-panel-heading h2 {
+  margin: 0;
+  color: #1d1d1b;
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: -.04em;
+  line-height: 1.2;
+}
+
+.qora-panel-heading p {
+  margin: 7px 0 0;
+  color: #81817b;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.qora-panel-heading-icon {
+  display: grid;
+  place-items: center;
+  width: 37px;
+  height: 37px;
+  flex: 0 0 37px;
+  border: 1px solid #e5e5e0;
+  border-radius: 12px;
+  background: #f7f7f5;
+  color: #252523;
+}
+
+.qora-results-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.qora-upload-panel .qora-panel-heading {
+  margin-bottom: 18px;
+}
+
+.qora-upload-panel>.space-y-3>label {
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 1px !important;
+  border-color: #d9d9d4 !important;
+  border-radius: 18px !important;
+  background: #f8f8f6 !important;
+  padding: 27px 20px !important;
+}
+
+.qora-upload-panel>.space-y-3>label:hover {
+  border-color: #8f8f89 !important;
+  background: #f5f5f2 !important;
+}
+
+.qora-upload-panel>.space-y-3>label h3 {
+  font-size: 13px !important;
+  font-weight: 750 !important;
+}
+
+.qora-upload-panel>.space-y-3>label p {
+  font-size: 10px !important;
+  line-height: 1.75 !important;
+}
+
+.qora-upload-panel>.space-y-3>label .mb-4 {
+  margin-bottom: 13px !important;
+}
+
+.qora-upload-panel>.space-y-3>label .h-16 {
+  width: 51px !important;
+  height: 51px !important;
+  border-radius: 15px !important;
+}
+
+.qora-upload-panel>.space-y-3>label .h-8 {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.qora-upload-panel>.space-y-3>div:last-child {
+  gap: 10px;
+  padding: 4px 2px 0;
+}
+
+.qora-upload-panel>.space-y-3>div:last-child>span {
+  color: #92928c;
+  font-size: 9px;
+}
+
+.qora-upload-panel>.space-y-3>div:last-child button {
+  color: #222;
+  font-size: 10px;
+}
+
+.qora-upload-preview {
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid #e5e5e0;
+  border-radius: 16px;
+  background: #f8f8f6;
+}
+
+.qora-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 13px;
+  border-bottom: 1px solid #e6e6e1;
+  color: #7c7c76;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.qora-preview-heading span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #33332f;
+  letter-spacing: 0;
+  font-size: 10px;
+}
+
+.qora-preview-image {
+  display: grid;
+  place-items: center;
+  height: 240px;
+  background: #111;
+}
+
+.qora-preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.qora-upload-preview>p {
+  margin: 0;
+  padding: 11px 13px;
+  color: #898983;
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+.qora-processing-state {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 17px;
+  padding: 14px;
+  border: 1px solid #e3e3de;
+  border-radius: 14px;
+  background: #f5f5f2;
+}
+
+.qora-processing-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border: 2px solid #c8c8c2;
+  border-top-color: #111;
+  border-radius: 50%;
+  animation: qora-spin .8s linear infinite;
+}
+
+.qora-processing-state>div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qora-processing-state strong {
+  color: #2d2d29;
+  font-size: 10px;
+}
+
+.qora-processing-state span:not(.qora-processing-spinner) {
+  color: #83837d;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.qora-inline-error {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 16px;
+  padding: 13px 14px;
+  border: 1px solid #d8d8d3;
+  border-radius: 13px;
+  background: #f4f4f1;
+  color: #454541;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.qora-inline-error strong {
+  color: #161615;
+  font-size: 10px;
+}
+
+/* Prediction result */
+.qora-result-panel>.relative,
+.qora-result-panel>div:not(.qora-panel-heading) {
+  border-radius: 17px !important;
+}
+
+.qora-result-panel>div:not(.qora-panel-heading) {
+  padding: 21px !important;
+}
+
+.qora-result-panel .text-3xl {
+  font-size: clamp(25px, 3vw, 36px) !important;
+}
+
+.qora-result-panel .text-4xl {
+  font-size: clamp(28px, 3.4vw, 40px) !important;
+}
+
+.qora-result-panel .mt-5.space-y-3 {
+  padding: 15px !important;
+}
+
+.qora-result-panel .h-2\.5 {
+  height: 7px !important;
+}
+
+/* Clinical interpretation */
+.qora-interpretation-panel>.flex.h-full {
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.qora-interpretation-panel .min-h-\[400px\] {
+  min-height: 280px !important;
+}
+
+.qora-interpretation-panel .qora-panel-heading {
+  margin-bottom: 17px;
+}
+
+.qora-interpretation-panel>.qora-panel-heading+div {
+  margin-top: 0;
+}
+
+.qora-interpretation-panel>.qora-panel-heading+div>.flex.h-full {
+  min-height: 0 !important;
+}
+
+.qora-interpretation-panel .rounded-xl.border-neutral-300.bg-neutral-100 {
+  border-color: #e6e6e1 !important;
+  background: #f6f6f3 !important;
+}
+
+/* Grad-CAM */
+.qora-gradcam-section {
+  margin-top: 20px;
+}
+
+.qora-gradcam-section>.qora-panel-heading {
+  margin-bottom: 18px;
+}
+
+.qora-gradcam-section>div:last-child {
+  border-radius: 17px;
+}
+
+.qora-clinical-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 19px;
+  padding: 15px 18px;
+  border: 1px solid #e5e5e0;
+  border-radius: 15px;
+  background: #f5f5f2;
+  color: #6d6d67;
+}
+
+.qora-clinical-note>svg {
+  flex: 0 0 17px;
+  margin-top: 1px;
+  color: #272725;
+}
+
+.qora-clinical-note p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.8;
+}
+
+.qora-clinical-note strong {
+  margin-right: 5px;
+  color: #292926;
+  font-weight: 800;
+}
+
+/* History */
+.qora-history-page .qora-page-heading {
+  margin-bottom: 27px;
+}
+
+.qora-history-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px;
+  margin-bottom: 20px;
+}
+
+.qora-stat-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid #e6e6e1;
+  border-radius: 17px;
+  background: white;
+}
+
+.qora-stat-icon {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  flex: 0 0 35px;
+  border: 1px solid #e7e7e2;
+  border-radius: 11px;
+  background: #f6f6f3;
+  color: #272725;
+}
+
+.qora-stat-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 4px;
+}
+
+.qora-stat-copy>span {
+  color: #85857f;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.qora-stat-copy strong {
+  overflow: hidden;
+  color: #1a1a18;
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: -.05em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+}
+
+.qora-stat-copy small {
+  color: #a0a099;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.qora-history-panel .qora-panel-heading {
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.qora-record-count {
+  padding: 7px 10px;
+  border: 1px solid #e6e6e1;
+  border-radius: 999px;
+  color: #777771;
+  background: #f8f8f6;
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.qora-history-panel>div:last-child {
+  overflow: hidden;
+  border-radius: 15px;
+}
+
+.qora-history-panel .overflow-hidden.rounded-2xl.border {
+  border-radius: 15px !important;
+  border-color: #e6e6e1 !important;
+}
+
+.qora-history-panel table {
+  border-collapse: collapse;
+}
+
+.qora-history-panel th {
+  background: #f3f3f0 !important;
+  color: #777771 !important;
+  font-size: 8px !important;
+  letter-spacing: .09em;
+}
+
+.qora-history-panel td {
+  font-size: 10px !important;
+}
+
+.qora-history-panel tbody tr:hover {
+  background: #f8f8f6 !important;
+}
+
+.qora-history-panel input {
+  min-height: 34px;
+  border-radius: 9px !important;
+  border-color: #e0e0db !important;
+}
+
+/* Global reskin for retained feature components */
+.qora-app .mono-card {
+  border-color: #e7e7e3;
+  border-radius: 18px;
+}
+
+.qora-app .prose-clinical p {
+  color: #62625d;
+}
+
+.qora-app .rounded-2xl.border,
+.qora-app .rounded-xl.border {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .025);
+}
+
+.qora-app .bg-gradient-to-r.from-blue-500 {
+  filter: none !important;
+}
+
+.qora-app .text-red-700,
+.qora-app .text-red-600 {
+  color: #343430 !important;
+}
+
+.qora-app .bg-red-50 {
+  background: #f4f4f1 !important;
+}
+
+.qora-app .border-red-300 {
+  border-color: #dcdcd6 !important;
+}
+
+.qora-app table th {
+  font-weight: 800;
+}
+
+.qora-app table td,
+.qora-app table th {
+  border-color: #e8e8e3;
+}
+
+.qora-app .bg-black {
+  background-color: #111 !important;
+}
+
+.qora-app .text-white {
+  color: #fff !important;
+}
+
+.qora-app .border-black {
+  border-color: #171717 !important;
+}
+
+.qora-app .hover\:bg-neutral-800:hover {
+  background-color: #292927 !important;
+}
+
+/* Education module */
+.qora-app #edukasi {
+  padding-top: 75px !important;
+  padding-bottom: 82px !important;
+  background: #f6f6f3 !important;
+  border-bottom: 0 !important;
+}
+
+.qora-app #edukasi h2 {
+  letter-spacing: -.055em;
+}
+
+.qora-app #edukasi .rounded-2xl.border,
+.qora-app #edukasi .rounded-xl.border {
+  box-shadow: none;
+}
+
+.qora-app #edukasi .rounded-2xl.border-neutral-300 {
+  border-color: #e4e4df !important;
+}
+
+.qora-app #edukasi .bg-neutral-50\/70 {
+  background: #fff !important;
+}
+
+.qora-app #edukasi table {
+  background: #fff;
+}
+
+.qora-app #edukasi .overflow-hidden.rounded-2xl {
+  overflow: hidden;
+}
+
+/* Footer */
+.qora-footer {
+  padding: 54px 0 20px;
+  border-top: 1px solid #e7e7e2;
+  background: #f9f9f7;
+}
+
+.qora-footer-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(130px, .55fr) minmax(220px, .9fr);
+  gap: 60px;
+  padding-bottom: 43px;
+}
+
+.qora-footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: #1b1b19;
+  text-decoration: none;
+}
+
+.qora-footer-brand>span {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 35px;
+  padding: 6px 8px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: #111;
+}
+
+.qora-footer-brand img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.qora-footer-brand strong {
+  font-size: 11px;
+  letter-spacing: .18em;
+}
+
+.qora-footer-brand-block>p {
+  max-width: 420px;
+  margin: 17px 0 0;
+  color: #81817b;
+  font-size: 10px;
+  line-height: 1.9;
+}
+
+.qora-footer-links,
+.qora-footer-disclaimer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.qora-footer-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  color: #2d2d29;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.qora-footer-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #777771;
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.qora-footer-links a:hover {
+  color: #111;
+}
+
+.qora-footer-disclaimer p {
+  margin: 0;
+  color: #81817b;
+  font-size: 10px;
+  line-height: 1.8;
+}
+
+.qora-footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 17px;
+  border-top: 1px solid #e7e7e2;
+  color: #9a9a94;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.qora-footer-bottom i,
+.qora-auth-footer i {
+  padding: 0 5px;
+  font-style: normal;
+}
+
+/* Authentication screen */
+.qora-auth {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f8f8f6;
+  color: #171715;
+}
+
+.qora-auth-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: min(1370px, calc(100% - 56px));
+  margin: 0 auto;
+  padding: 22px 0;
+}
+
+.qora-auth-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.qora-auth-brand .qora-brand-logo {
+  width: 92px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.qora-auth-system {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #898983;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.qora-auth-system.is-online .qora-status-dot {
+  background: #111;
+}
+
+.qora-auth-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(390px, .8fr);
+  align-items: center;
+  gap: clamp(42px, 8vw, 115px);
+  width: min(1240px, calc(100% - 56px));
+  margin: auto;
+  padding: 32px 0 58px;
+  flex: 1;
+}
+
+.qora-auth-story {
+  min-width: 0;
+}
+
+.qora-auth-story-copy {
+  max-width: 590px;
+}
+
+.qora-auth-story-copy h1 {
+  margin: 22px 0 16px;
+  color: #141412;
+  font-size: clamp(42px, 5.1vw, 68px);
+  font-weight: 740;
+  letter-spacing: -.075em;
+  line-height: .99;
+}
+
+.qora-auth-story-copy p {
+  max-width: 530px;
+  margin: 0;
+  color: #73736d;
+  font-size: 12px;
+  line-height: 1.9;
+}
+
+.qora-auth-image-card {
+  max-width: 540px;
+  margin-top: 31px;
+  padding: 12px;
+  border: 1px solid #e3e3de;
+  border-radius: 24px;
+  background: white;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, .055);
+  transform: rotate(-.5deg);
+}
+
+.qora-auth-image-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 8px 13px;
+  color: #999992;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .14em;
+}
+
+.qora-auth-image-window {
+  position: relative;
+  height: clamp(200px, 23vw, 300px);
+  overflow: hidden;
+  border-radius: 15px;
+  background: #111;
+}
+
+.qora-auth-image-window img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1);
+  opacity: .9;
+}
+
+.qora-auth-image-window::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .02), transparent 60%, rgba(0, 0, 0, .2));
+}
+
+.qora-auth-image-corner {
+  position: absolute;
+  z-index: 2;
+  width: 17px;
+  height: 17px;
+  border-color: rgba(255, 255, 255, .8);
+  border-style: solid;
+}
+
+.qora-auth-corner-a {
+  top: 13px;
+  left: 13px;
+  border-width: 1px 0 0 1px;
+}
+
+.qora-auth-corner-b {
+  top: 13px;
+  right: 13px;
+  border-width: 1px 1px 0 0;
+}
+
+.qora-auth-corner-c {
+  bottom: 13px;
+  left: 13px;
+  border-width: 0 0 1px 1px;
+}
+
+.qora-auth-corner-d {
+  bottom: 13px;
+  right: 13px;
+  border-width: 0 1px 1px 0;
+}
+
+.qora-auth-image-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 8px 5px;
+}
+
+.qora-auth-image-foot>div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qora-auth-image-foot strong {
+  color: #282825;
+  font-size: 10px;
+}
+
+.qora-auth-image-foot span:not(.qora-auth-image-mark) {
+  color: #92928c;
+  font-size: 9px;
+}
+
+.qora-auth-image-mark {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border: 1px solid #e6e6e1;
+  border-radius: 10px;
+  background: #f4f4f1;
+}
+
+.qora-auth-feature-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 540px;
+  margin-top: 19px;
+}
+
+.qora-auth-feature-row>div {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  column-gap: 8px;
+  align-items: center;
+}
+
+.qora-auth-feature-row>div>span {
+  display: grid;
+  place-items: center;
+  grid-row: span 2;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e5e5e0;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.qora-auth-feature-row strong {
+  color: #3b3b37;
+  font-size: 9px;
+}
+
+.qora-auth-feature-row small {
+  color: #999992;
+  font-size: 8px;
+}
+
+.qora-auth-form-side {
+  width: 100%;
+  max-width: 470px;
+  justify-self: end;
+}
+
+.qora-auth-form-card {
+  padding: clamp(25px, 3.2vw, 39px);
+  border: 1px solid #e4e4df;
+  border-radius: 25px;
+  background: #fff;
+  box-shadow: 0 22px 65px rgba(0, 0, 0, .045);
+}
+
+.qora-auth-form-index {
+  color: #9a9a94;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .15em;
+}
+
+.qora-auth-form-heading h2 {
+  margin: 14px 0 8px;
+  color: #181816;
+  font-size: 28px;
+  font-weight: 750;
+  letter-spacing: -.06em;
+}
+
+.qora-auth-form-heading p {
+  margin: 0;
+  color: #82827c;
+  font-size: 10px;
+  line-height: 1.75;
+}
+
+.qora-auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 24px 0 22px;
+  padding: 4px;
+  border: 1px solid #ededE8;
+  border-radius: 12px;
+  background: #f6f6f3;
+}
+
+.qora-auth-tabs button {
+  min-height: 37px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #85857f;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.qora-auth-tabs button.is-active {
+  border-color: #e6e6e1;
+  background: white;
+  color: #1a1a18;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .035);
+}
+
+.qora-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.qora-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.qora-field label {
+  color: #53534e;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.qora-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 45px;
+  padding: 0 12px;
+  border: 1px solid #e4e4df;
+  border-radius: 11px;
+  background: #fafaf8;
+  color: #a0a099;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.qora-input-wrap:focus-within {
+  border-color: #85857f;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, .035);
+}
+
+.qora-input-wrap>svg {
+  flex: 0 0 16px;
+}
+
+.qora-input-wrap input {
+  width: 100%;
+  min-width: 0;
+  height: 43px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #242422;
+  font-size: 10px;
+}
+
+.qora-input-wrap input::placeholder {
+  color: #b0b0aa;
+}
+
+.qora-password-toggle {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #969690;
+  cursor: pointer;
+}
+
+.qora-password-toggle:hover {
+  background: #ededeb;
+  color: #111;
+}
+
+.qora-auth-submit {
+  width: 100%;
+  margin-top: 4px;
+  min-height: 46px;
+  justify-content: space-between;
+  padding-inline: 16px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.qora-auth-submit:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.qora-auth-submit .qora-processing-spinner {
+  width: 13px;
+  height: 13px;
+  flex-basis: 13px;
+  border-color: rgba(255, 255, 255, .35);
+  border-top-color: white;
+}
+
+.qora-auth-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 14px 0;
+  padding: 11px 12px;
+  border: 1px solid #e2e2dd;
+  border-radius: 10px;
+  background: #f7f7f4;
+  color: #555550;
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+.qora-auth-message svg {
+  flex: 0 0 16px;
+  margin-top: 1px;
+}
+
+.qora-auth-message.is-error {
+  background: #f2f2ef;
+  color: #33332f;
+}
+
+.qora-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 14px;
+}
+
+.qora-auth-divider span {
+  height: 1px;
+  flex: 1;
+  background: #ededE8;
+}
+
+.qora-auth-divider small {
+  color: #aaa9a3;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.qora-demo-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid #e6e6e1;
+  border-radius: 11px;
+  background: #fff;
+  color: #4e4e49;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.qora-demo-button:hover {
+  border-color: #bcbcb5;
+  background: #f8f8f6;
+}
+
+.qora-auth-small-note {
+  margin: 10px 0 0;
+  color: #a1a19a;
+  font-size: 8px;
+  line-height: 1.7;
+}
+
+.qora-auth-security {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  margin-top: 15px;
+  color: #9a9a94;
+  font-size: 8px;
+}
+
+.qora-auth-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  width: min(1370px, calc(100% - 56px));
+  margin: 0 auto;
+  padding: 17px 0 22px;
+  border-top: 1px solid #e8e8e3;
+  color: #9a9a94;
+  font-size: 8px;
+}
+
+/* Motion and scrollbars */
+@keyframes qora-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes qora-scan {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(400px);
+  }
+}
+
+.animate-scan {
+  animation: qora-scan 2.4s linear infinite;
+}
+
 ::-webkit-scrollbar {
   width: 7px;
   height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f5f5f5;
+  background: #f0f0ed;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d4;
-  border-radius: 3px;
+  background: #cfcfca;
+  border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #737373;
+  background: #9b9b95;
+}
+
+/* Responsive */
+@media (max-width: 1120px) {
+  .qora-header-inner {
+    gap: 16px;
+  }
+
+  .qora-header-status {
+    display: none;
+  }
+
+  .qora-hero-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, .82fr);
+    gap: 42px;
+  }
+
+  .qora-floating-note-top {
+    right: -8px;
+  }
+
+  .qora-floating-note-bottom {
+    left: -15px;
+  }
+
+  .qora-footer-main {
+    gap: 38px;
+  }
+
+  .qora-auth-main {
+    gap: 48px;
+  }
+}
+
+@media (max-width: 900px) {
+  .qora-container {
+    width: min(100% - 36px, 760px);
+  }
+
+  .qora-header-inner {
+    width: calc(100% - 36px);
+    min-height: 72px;
+  }
+
+  .qora-brand-logo {
+    width: 85px;
+    height: 37px;
+  }
+
+  .qora-brand-copy {
+    display: none;
+  }
+
+  .qora-desktop-nav {
+    margin-left: auto;
+  }
+
+  .qora-desktop-nav a {
+    padding: 0 12px;
+  }
+
+  .qora-user-copy {
+    display: none;
+  }
+
+  .qora-user-menu {
+    padding-left: 8px;
+  }
+
+  .qora-hero-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, .82fr);
+    gap: 25px;
+    padding-top: 65px;
+    padding-bottom: 72px;
+  }
+
+  .qora-hero-copy h1 {
+    font-size: clamp(42px, 6.2vw, 58px);
+  }
+
+  .qora-hero-description {
+    font-size: 12px;
+  }
+
+  .qora-xray-frame {
+    height: 330px;
+  }
+
+  .qora-floating-note {
+    padding: 8px 10px;
+  }
+
+  .qora-floating-note-top {
+    right: -4px;
+  }
+
+  .qora-floating-note-bottom {
+    left: -5px;
+  }
+
+  .qora-feature-card {
+    padding: 19px;
+  }
+
+  .qora-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .qora-upload-panel>.space-y-3>label {
+    min-height: 245px;
+  }
+
+  .qora-results-column {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .qora-history-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .qora-auth-main {
+    grid-template-columns: minmax(0, 1fr) minmax(330px, .85fr);
+    width: calc(100% - 36px);
+    gap: 30px;
+  }
+
+  .qora-auth-story-copy h1 {
+    font-size: clamp(38px, 5.4vw, 52px);
+  }
+
+  .qora-auth-image-window {
+    height: 220px;
+  }
+
+  .qora-auth-form-card {
+    padding: 25px;
+  }
+}
+
+@media (max-width: 680px) {
+  .qora-container {
+    width: calc(100% - 32px);
+  }
+
+  .qora-header-inner {
+    width: calc(100% - 28px);
+    min-height: 65px;
+  }
+
+  .qora-brand-logo {
+    width: 79px;
+    height: 34px;
+    padding: 6px;
+  }
+
+  .qora-desktop-nav {
+    display: none;
+  }
+
+  .qora-header-actions {
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .qora-header-cta {
+    min-height: 35px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 9px;
+  }
+
+  .qora-header-cta svg:last-child {
+    display: none;
+  }
+
+  .qora-user-menu {
+    gap: 5px;
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .qora-user-avatar {
+    width: 29px;
+    height: 29px;
+  }
+
+  .qora-logout-button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .qora-mobile-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 4px;
+    padding: 7px 13px 9px;
+    border-top: 1px solid #ededE8;
+    background: rgba(251, 251, 249, .96);
+  }
+
+  .qora-mobile-nav a {
+    padding: 7px 12px;
+    border-radius: 999px;
+    color: #85857f;
+    font-size: 10px;
+    font-weight: 750;
+    text-decoration: none;
+  }
+
+  .qora-mobile-nav a.is-active {
+    background: #111;
+    color: #fff;
+  }
+
+  .qora-mobile-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #888882;
+    font-size: 8px;
+  }
+
+  .qora-mobile-status.is-online {
+    color: #252523;
+  }
+
+  .qora-hero-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 39px;
+    padding-top: 46px;
+    padding-bottom: 54px;
+  }
+
+  .qora-hero-copy h1 {
+    margin-top: 21px;
+    font-size: clamp(43px, 12vw, 58px);
+  }
+
+  .qora-hero-description {
+    margin-top: 18px;
+    font-size: 12px;
+  }
+
+  .qora-hero-actions {
+    gap: 8px;
+    margin-top: 23px;
+  }
+
+  .qora-button {
+    min-height: 43px;
+    padding: 0 13px;
+    gap: 7px;
+    font-size: 10px;
+  }
+
+  .qora-hero-footnote {
+    margin-top: 22px;
+    font-size: 9px;
+  }
+
+  .qora-hero-visual-wrap {
+    max-width: 440px;
+    margin-inline: auto;
+    padding: 0 4px 8px;
+  }
+
+  .qora-hero-visual {
+    border-radius: 22px;
+  }
+
+  .qora-visual-topline {
+    padding: 14px 14px 11px;
+    font-size: 7px;
+  }
+
+  .qora-xray-frame {
+    height: min(78vw, 350px);
+    margin: 0 8px;
+    border-radius: 13px;
+  }
+
+  .qora-visual-footer {
+    padding: 13px 14px 15px;
+  }
+
+  .qora-visual-footer strong {
+    font-size: 10px;
+  }
+
+  .qora-floating-note-top {
+    top: 13%;
+    right: -1px;
+  }
+
+  .qora-floating-note-bottom {
+    bottom: 10%;
+    left: -3px;
+  }
+
+  .qora-floating-note strong {
+    font-size: 9px;
+  }
+
+  .qora-floating-note small {
+    font-size: 8px;
+  }
+
+  .qora-floating-icon {
+    width: 27px;
+    height: 27px;
+  }
+
+  .qora-capabilities-section {
+    padding: 51px 0 48px;
+  }
+
+  .qora-section-intro {
+    display: block;
+    margin-bottom: 22px;
+  }
+
+  .qora-section-intro h2 {
+    font-size: 29px;
+  }
+
+  .qora-section-intro>p {
+    margin-top: 13px;
+    font-size: 11px;
+  }
+
+  .qora-feature-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .qora-feature-card {
+    min-height: 0;
+    padding: 19px;
+  }
+
+  .qora-feature-card h3 {
+    margin-top: 15px;
+  }
+
+  .qora-method-strip {
+    flex-wrap: wrap;
+    gap: 13px;
+    padding: 15px;
+  }
+
+  .qora-method-brand {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .qora-method-item {
+    padding-left: 10px;
+  }
+
+  .qora-method-link {
+    margin-left: auto;
+  }
+
+  .qora-page-content {
+    padding-top: 35px;
+    padding-bottom: 55px;
+  }
+
+  .qora-page-heading {
+    display: block;
+    margin-bottom: 21px;
+  }
+
+  .qora-page-heading h1 {
+    font-size: 36px;
+  }
+
+  .qora-page-heading p {
+    font-size: 11px;
+  }
+
+  .qora-page-heading-action {
+    margin-top: 16px;
+  }
+
+  .qora-system-pill {
+    font-size: 8px;
+  }
+
+  .qora-workflow-steps {
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px;
+  }
+
+  .qora-workflow-step {
+    gap: 6px;
+  }
+
+  .qora-workflow-step>span {
+    width: 25px;
+    height: 25px;
+    flex-basis: 25px;
+  }
+
+  .qora-workflow-step strong {
+    font-size: 8px;
+  }
+
+  .qora-workflow-step small {
+    font-size: 8px;
+  }
+
+  .qora-workflow-connector {
+    min-width: 10px;
+  }
+
+  .qora-panel {
+    padding: 17px;
+    border-radius: 18px;
+  }
+
+  .qora-panel-heading {
+    margin-bottom: 17px;
+    gap: 10px;
+  }
+
+  .qora-panel-heading h2 {
+    font-size: 16px;
+  }
+
+  .qora-panel-heading p {
+    font-size: 9px;
+  }
+
+  .qora-panel-heading-icon {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .qora-upload-panel>.space-y-3>label {
+    min-height: 250px;
+    padding: 22px 12px !important;
+  }
+
+  .qora-results-column {
+    display: flex;
+  }
+
+  .qora-result-panel>div:not(.qora-panel-heading) {
+    padding: 16px !important;
+  }
+
+  .qora-result-panel .mt-5.flex.items-baseline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .qora-result-panel .mt-5.flex.items-baseline>div:last-child {
+    text-align: left;
+  }
+
+  .qora-preview-image {
+    height: 210px;
+  }
+
+  .qora-history-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .qora-stat-card {
+    gap: 8px;
+    padding: 11px;
+    border-radius: 13px;
+  }
+
+  .qora-stat-icon {
+    width: 29px;
+    height: 29px;
+    flex-basis: 29px;
+  }
+
+  .qora-stat-copy>span {
+    font-size: 8px;
+  }
+
+  .qora-stat-copy strong {
+    font-size: 19px;
+  }
+
+  .qora-stat-copy small {
+    font-size: 7px;
+  }
+
+  .qora-record-count {
+    font-size: 8px;
+  }
+
+  .qora-clinical-note {
+    padding: 12px;
+  }
+
+  .qora-clinical-note p {
+    font-size: 9px;
+  }
+
+  .qora-footer {
+    padding-top: 39px;
+  }
+
+  .qora-footer-main {
+    grid-template-columns: 1fr 1fr;
+    gap: 30px 20px;
+    padding-bottom: 29px;
+  }
+
+  .qora-footer-brand-block {
+    grid-column: 1 / -1;
+  }
+
+  .qora-footer-disclaimer {
+    grid-column: 1 / -1;
+  }
+
+  .qora-footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+    font-size: 8px;
+  }
+
+  .qora-app #edukasi {
+    padding-top: 48px !important;
+    padding-bottom: 50px !important;
+  }
+
+  .qora-app #edukasi .flex.flex-col.md\:flex-row {
+    align-items: flex-start;
+  }
+
+  .qora-auth-topbar {
+    width: calc(100% - 32px);
+    padding: 15px 0;
+  }
+
+  .qora-auth-system {
+    font-size: 8px;
+  }
+
+  .qora-auth-main {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 28px;
+    width: calc(100% - 32px);
+    padding: 24px 0 35px;
+  }
+
+  .qora-auth-story-copy h1 {
+    max-width: 470px;
+    font-size: clamp(40px, 11vw, 53px);
+  }
+
+  .qora-auth-story-copy p {
+    font-size: 11px;
+  }
+
+  .qora-auth-image-card {
+    margin-top: 22px;
+  }
+
+  .qora-auth-image-window {
+    height: 220px;
+  }
+
+  .qora-auth-feature-row {
+    gap: 7px;
+  }
+
+  .qora-auth-feature-row>div {
+    grid-template-columns: 25px 1fr;
+    column-gap: 5px;
+  }
+
+  .qora-auth-feature-row>div>span {
+    width: 25px;
+    height: 25px;
+  }
+
+  .qora-auth-feature-row strong {
+    font-size: 8px;
+  }
+
+  .qora-auth-feature-row small {
+    font-size: 7px;
+  }
+
+  .qora-auth-form-side {
+    max-width: none;
+  }
+
+  .qora-auth-form-card {
+    padding: 22px;
+    border-radius: 20px;
+  }
+
+  .qora-auth-form-heading h2 {
+    font-size: 25px;
+  }
+
+  .qora-auth-footer {
+    flex-direction: column;
+    gap: 7px;
+    width: calc(100% - 32px);
+    font-size: 7px;
+  }
+}
+
+@media (max-width: 390px) {
+  .qora-header-cta span {
+    display: none;
+  }
+
+  .qora-header-cta {
+    width: 35px;
+    padding: 0;
+  }
+
+  .qora-hero-actions {
+    align-items: stretch;
+  }
+
+  .qora-hero-actions .qora-button {
+    width: 100%;
+  }
+
+  .qora-hero-copy h1 {
+    font-size: 42px;
+  }
+
+  .qora-floating-note {
+    gap: 6px;
+    padding: 7px 8px;
+  }
+
+  .qora-floating-note-bottom {
+    left: -6px;
+  }
+
+  .qora-workflow-step small {
+    display: none;
+  }
+
+  .qora-history-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* =========================================================
+   QORA CLASSIFICATION LAYOUT FIX
+   Keep layout rules outside media queries.
+   ========================================================= */
+
+/* Outer wrapper controls vertical spacing between sections */
+.qora-classification-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  min-width: 0;
+}
+
+.qora-classification-sections>* {
+  min-width: 0;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* 01 + 02: equal-height cards */
+.qora-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  align-items: stretch !important;
+  gap: 24px;
+  min-width: 0;
+}
+
+.qora-analysis-grid>.qora-upload-panel,
+.qora-analysis-grid>.qora-results-column {
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.qora-upload-panel,
+.qora-results-column {
+  box-sizing: border-box;
+}
+
+.qora-results-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: auto !important;
+  min-width: 0;
+  min-height: 0;
+}
+
+.qora-results-column>.qora-result-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: auto !important;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.qora-result-panel>.qora-panel-heading {
+  flex: 0 0 auto;
+}
+
+/* Prevent nested result content from forcing the card to overflow */
+.qora-result-panel>div:not(.qora-panel-heading) {
+  flex: 1 1 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  box-sizing: border-box;
+}
+
+.qora-result-panel>.relative {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  box-sizing: border-box;
+}
+
+/* 03: Clinical Interpretation and Chatbot share a row */
+.qora-review-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 24px;
+  width: 100%;
+  min-width: 0;
+  margin: 0 !important;
+}
+
+.qora-review-grid>.qora-interpretation-section,
+.qora-review-grid>.qora-chatbot-section {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 !important;
+  align-self: stretch;
+}
+
+.qora-review-grid.is-single>.qora-interpretation-section {
+  grid-column: 1 / -1;
+}
+
+/* Remove inherited fixed heights from InterpretationBox */
+.qora-interpretation-panel {
+  height: auto !important;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.qora-interpretation-panel>.flex.h-full {
+  display: block !important;
+  width: 100%;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+.qora-interpretation-panel .min-h-\[400px\],
+.qora-interpretation-panel .min-h-\[280px\] {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  box-sizing: border-box;
+}
+
+.qora-interpretation-panel>.flex.h-full>.flex-1.py-6 {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: none !important;
+}
+
+.qora-interpretation-panel .qora-panel-heading {
+  margin-bottom: 17px;
+}
+
+/* Chatbot card: fixed maximum height, scroll only the conversation */
+.qora-review-grid>.qora-chatbot-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.qora-review-grid .qora-chatbot-section>div {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-height: 480px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.qora-review-grid .qora-chatbot-section>div>div:first-child {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.qora-review-grid .qora-chatbot-section>div>div:nth-child(2) {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 120px !important;
+  max-height: 280px !important;
+  height: auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.qora-review-grid .qora-chatbot-section>div>div:last-child {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+/* 04: Grad-CAM is a separate card with a clear gap */
+.qora-gradcam-section {
+  width: 100%;
+  min-width: 0;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+.qora-gradcam-section>.qora-panel-heading {
+  margin-bottom: 18px;
+}
+
+.qora-gradcam-section>div:last-child {
+  min-width: 0;
+  border-radius: 17px;
+}
+
+/* Tablet and mobile */
+@media (max-width: 900px) {
+  .qora-classification-sections {
+    gap: 22px;
+  }
+
+  .qora-analysis-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .qora-review-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .qora-review-grid.is-single>.qora-interpretation-section {
+    grid-column: auto;
+  }
+
+  .qora-review-grid .qora-chatbot-section>div {
+    max-height: 460px;
+  }
+}
+
+/* FIX: Reduce excessive spacing below the header on Home */
+.qora-home-view .qora-hero-grid {
+  padding-top: 24px !important;
+}
+
+/* Keep comfortable spacing on mobile */
+@media (max-width: 680px) {
+  .qora-home-view .qora-hero-grid {
+    padding-top: 32px !important;
+  }
+}
+
+/* Hilangkan garis dekoratif pada page heading */
+.qora-page-heading .qora-eyebrow-mark {
+  display: none !important;
+}
+
+
+
+/* =========================================================
+   QORA LOGIN TITLE + LOGO ALIGNMENT
+   The logo square matches the full height of the two-line title.
+   Scoped to the login page so the home page remains unchanged.
+   ========================================================= */
+
+.qora-auth .qora-auth-title-row {
+  --qora-login-title-size: clamp(22px, 2.3vw, 34px);
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+  width: 100%;
+  min-width: 0;
+}
+
+.qora-auth .qora-auth-title-mark {
+  display: block;
+  position: relative;
+  align-self: stretch;
+  width: calc(var(--qora-login-title-size) * 2.16);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 calc(var(--qora-login-title-size) * 2.16);
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #292929;
+}
+
+.qora-auth .qora-auth-title-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  margin: 0;
+  padding: 0;
+}
+
+.qora-auth .qora-auth-hero-title {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.qora-auth .qora-auth-hero-title h1 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: #171715;
+  font-size: var(--qora-login-title-size);
+  font-weight: 750;
+  line-height: 1.08;
+  letter-spacing: -.055em;
+}
+
+.qora-auth .qora-auth-hero-title h1 span {
+  display: block;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .qora-auth .qora-auth-title-row {
+    --qora-login-title-size: clamp(20px, 2.3vw, 29px);
+    gap: 14px;
+  }
+
+  .qora-auth .qora-auth-title-mark {
+    border-radius: 15px;
+  }
+}
+
+@media (max-width: 900px) {
+  .qora-auth .qora-auth-title-row {
+    --qora-login-title-size: clamp(20px, 3.4vw, 30px);
+  }
+
+  .qora-auth .qora-auth-hero-title h1 span {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 600px) {
+  .qora-auth .qora-auth-title-row {
+    --qora-login-title-size: clamp(19px, 5vw, 27px);
+    gap: 12px;
+  }
+
+  .qora-auth .qora-auth-title-mark {
+    border-radius: 12px;
+  }
+}
+
+/* FIX: QORA header logo dimensions */
+.qora-header .qora-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  overflow: hidden;
+}
+
+.qora-header .qora-brand img.tiny-logo {
+  display: block;
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px;
+  max-width: 56px !important;
+  max-height: 56px !important;
+  flex: 0 0 56px;
+  object-fit: contain;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: #292929;
+}
+
+/* Prevent the header from expanding beyond the viewport */
+.qora-header,
+.qora-header-inner {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.qora-header-inner {
+  min-width: 0;
+}
+
+.qora-desktop-nav,
+.qora-header-actions {
+  min-width: 0;
+}
+
+/* ==========================================
+   QORA HEADER BRAND
+   ========================================== */
+
+.qora-header .qora-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  width: auto;
+  min-width: 0;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+/* Keep existing logo dimensions */
+.qora-header .qora-brand .tiny-logo {
+  display: block;
+  width: 112px;
+  height: 112px;
+  flex-shrink: 0;
+}
+
+/* QORA text */
+.qora-header .qora-brand-name {
+  display: inline-block;
+  color: #171717;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .qora-header .qora-brand {
+    gap: 12px;
+  }
+
+  .qora-header .qora-brand-name {
+    font-size: 28px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .qora-header .qora-brand {
+    gap: 9px;
+  }
+
+  .qora-header .qora-brand .tiny-logo {
+    width: 58px;
+    height: 58px;
+  }
+
+  .qora-header .qora-brand-name {
+    font-size: 24px;
+  }
+}
+
+.qora-auth .qora-input-wrap input:focus,
+.qora-auth .qora-input-wrap input:focus-visible {
+  outline: none !important;
+}
+
+/* ==========================================
+   QORA — RADIOGRAPH UPLOAD RESTORE
+   ========================================== */
+
+/* Upload card */
+.qora-auth~.qora-upload-card,
+.qora-upload-card {
+  box-sizing: border-box;
+}
+
+/* Source image preview */
+.qora-source-image,
+.qora-image-preview {
+  position: relative;
+  overflow: hidden;
+  background: #111;
+  border-radius: 14px;
+}
+
+/* Image proportions */
+.qora-source-image img,
+.qora-image-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Scanning overlay */
+.qora-source-image::after,
+.qora-image-preview::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 0 8px rgba(255, 255, 255, 0.55),
+    0 0 22px rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+  animation: qora-radiograph-scan 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes qora-radiograph-scan {
+  from {
+    top: 0;
+  }
+
+  to {
+    top: calc(100% - 2px);
+  }
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+
+  .qora-source-image::after,
+  .qora-image-preview::after {
+    animation: none;
+  }
+}
+
+/* ==========================================
+   QORA SOURCE IMAGE SCANNER
+   ========================================== */
+
+.qora-source-scan {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e5e4df;
+  border-radius: 16px;
+  background: #fff;
+  color: #191919;
+}
+
+.qora-source-scan-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e9e8e4;
+  font-size: 12px;
+  color: #65655f;
+}
+
+.qora-source-scan-toolbar>span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qora-source-scan-toolbar>span:first-child {
+  font-weight: 600;
+}
+
+.qora-source-scan-status {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  white-space: nowrap;
+}
+
+.qora-source-status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #8c8c84;
+}
+
+.qora-source-scan.is-scanning .qora-source-status-dot {
+  background: #242424;
+  animation: qora-scan-pulse 1.2s ease-in-out infinite;
+}
+
+.qora-source-scan.is-complete .qora-source-status-dot {
+  background: #77776f;
+  animation: none;
+}
+
+.qora-source-scan-image {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  overflow: hidden;
+  background: #171717;
+  line-height: 0;
+}
+
+.qora-source-scan-image>img {
+  position: relative;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+/* Subtle image overlay */
+.qora-source-image-overlay {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+      rgba(0, 0, 0, 0.06),
+      transparent 16%,
+      transparent 84%,
+      rgba(0, 0, 0, 0.08));
+}
+
+/* Four image-frame corners */
+.qora-source-scan-corner {
+  position: absolute;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  border-color: rgba(255, 255, 255, 0.8);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.qora-source-scan-corner.corner-tl {
+  top: 16px;
+  left: 16px;
+  border-width: 1px 0 0 1px;
+}
+
+.qora-source-scan-corner.corner-tr {
+  top: 16px;
+  right: 16px;
+  border-width: 1px 1px 0 0;
+}
+
+.qora-source-scan-corner.corner-bl {
+  bottom: 16px;
+  left: 16px;
+  border-width: 0 0 1px 1px;
+}
+
+.qora-source-scan-corner.corner-br {
+  right: 16px;
+  bottom: 16px;
+  border-width: 0 1px 1px 0;
+}
+
+/* Scanning line moves vertically over the image */
+.qora-source-scan-line {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  animation: qora-scan-vertical 3s ease-in-out infinite alternate;
+}
+
+.qora-source-scan-beam {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 22%;
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.025),
+      transparent);
+  pointer-events: none;
+  animation: qora-scan-beam 3s ease-in-out infinite alternate;
+}
+
+.qora-source-scan-label {
+  position: absolute;
+  z-index: 4;
+  top: 28px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 40px);
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 6px;
+  background: rgba(20, 20, 20, 0.78);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.qora-source-scan-label .qora-source-status-dot {
+  background: #fff;
+}
+
+/* Ready status */
+.qora-source-scan-ready {
+  position: absolute;
+  z-index: 4;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(20, 20, 20, 0.76);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* File information footer */
+.qora-source-scan-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 16px;
+  border-top: 1px solid #e9e8e4;
+  background: #fff;
+}
+
+.qora-source-file-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.qora-source-file-info strong {
+  overflow: hidden;
+  color: #242424;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qora-source-file-info>span {
+  color: #85857e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.qora-source-replace-button {
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  border: 1px solid #deded8;
+  border-radius: 8px;
+  background: #fff;
+  color: #333;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.qora-source-replace-button:hover:not(:disabled) {
+  border-color: #b8b8b0;
+  background: #f5f5f2;
+}
+
+.qora-source-replace-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Animations */
+@keyframes qora-scan-vertical {
+  from {
+    top: 0;
+  }
+
+  to {
+    top: calc(100% - 2px);
+  }
+}
+
+@keyframes qora-scan-beam {
+  from {
+    top: 0;
+  }
+
+  to {
+    top: 78%;
+  }
+}
+
+@keyframes qora-scan-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .qora-source-scan-line,
+  .qora-source-scan-beam,
+  .qora-source-scan.is-scanning .qora-source-status-dot {
+    animation: none;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .qora-source-scan-toolbar {
+    padding-inline: 12px;
+  }
+
+  .qora-source-scan-footer {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .qora-source-scan-label {
+    top: 24px;
+    font-size: 9px;
+  }
+
+  .qora-source-scan-corner {
+    width: 17px;
+    height: 17px;
+  }
 }

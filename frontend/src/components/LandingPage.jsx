@@ -9,6 +9,9 @@ import {
   EyeOff,
   AlertCircle,
   CheckCircle2,
+  Layers,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { signIn, signUp } from "../services/auth.js";
 
@@ -23,53 +26,34 @@ export default function LandingPage({ onLoginSuccess, health }) {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const online = health?.ok;
-  const device = health?.device
-    ? health.device.toUpperCase()
-    : "CPU";
-
   async function handleSubmit(e) {
     e.preventDefault();
-
     setError("");
     setSuccessMsg("");
     setLoading(true);
 
     try {
       if (mode === "signin") {
-        const user = await signIn({
-          identifier,
-          password,
-        });
-
+        const user = await signIn({ identifier, password });
         setSuccessMsg(
           `Selamat datang kembali, ${user.name || user.username}!`
         );
-
         onLoginSuccess(user);
       } else {
-        const result = await signUp({
-          email,
-          username,
-          password,
-        });
+        const result = await signUp({ email, username, password });
 
         if (result.needsEmailConfirmation) {
           setSuccessMsg(
             result.message ||
             "Pendaftaran diterima. Periksa email untuk menyelesaikan verifikasi sebelum masuk."
           );
-
           setMode("signin");
           setIdentifier(email.trim().toLowerCase());
           setPassword("");
           return;
         }
 
-        setSuccessMsg(
-          `Akun @${result.username} berhasil dibuat!`
-        );
-
+        setSuccessMsg(`Akun @${result.username} berhasil dibuat!`);
         onLoginSuccess(result);
       }
     } catch (err) {
@@ -98,308 +82,299 @@ export default function LandingPage({ onLoginSuccess, health }) {
     setSuccessMsg("");
   }
 
-  const inputClass =
-    "w-full rounded-xl border border-neutral-200 bg-neutral-50/50 py-3 pl-10 pr-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-black";
-
-  const labelClass =
-    "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-neutral-700";
-
   return (
-    <div className="relative flex min-h-screen flex-col bg-neutral-50 bg-monochrome-grid text-neutral-900 selection:bg-black selection:text-white">
-      <main className="mx-auto flex w-full max-w-7xl flex-1 items-center px-4 py-8 sm:px-6 lg:py-12">
-        <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-12">
-          {/* QORA branding and description */}
-          <section className="flex flex-col justify-center space-y-6 lg:col-span-7 lg:pr-8">
-            <div className="flex items-center">
-              <div className="inline-flex items-center rounded-2xl bg-black px-5 py-2.5 shadow-md">
-                <img
-                  src="/logo-transparent.png"
-                  alt="QORA"
-                  className="h-12 w-auto object-contain sm:h-14"
-                />
-              </div>
+    <div className="qora-auth">
+      <main className="qora-auth-main">
+        <section className="qora-auth-story">
+          <div className="qora-auth-title-row">
+            <div className="qora-auth-title-mark">
+              <img src="/tiny-logo.png" alt="QORA" />
             </div>
 
-            <div className="space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl lg:text-5xl">
-                Quantum-Optimized Radiograph Analysis
+            <div className="qora-auth-hero-title">
+              <h1>
+                <span>Quantum-Optimized</span>
+                <span>Radiograph Analysis</span>
               </h1>
+            </div>
+          </div>
 
-              <p className="max-w-2xl text-sm leading-relaxed text-neutral-600 sm:text-base">
-                QORA adalah platform radiologi digital terintegrasi
-                yang menggabungkan algoritma{" "}
-                <em>Variational Quantum Circuit</em> (VQC 6-Qubit)
-                dengan model{" "}
-                <em>Deep Convolutional Neural Network</em> untuk
-                mendeteksi indikasi Tuberkulosis (TB) pada citra
-                Chest X-Ray secara presisi, objektif, dan transparan.
+          <div className="qora-auth-image-card">
+            <div className="qora-auth-image-window">
+              <img
+                src="/education-normal.png"
+                alt="Contoh radiograf toraks untuk referensi visual"
+              />
+              <span className="qora-auth-image-corner qora-auth-corner-a" />
+              <span className="qora-auth-image-corner qora-auth-corner-b" />
+              <span className="qora-auth-image-corner qora-auth-corner-c" />
+              <span className="qora-auth-image-corner qora-auth-corner-d" />
+            </div>
+          </div>
+
+          <div className="qora-auth-feature-row">
+            <div>
+              <span><Layers size={15} /></span>
+              <strong>Grad-CAM</strong>
+              <small>Visual explanation</small>
+            </div>
+
+            <div>
+              <span><Sparkles size={15} /></span>
+              <strong>AI-assisted</strong>
+              <small>Clinical interpretation</small>
+            </div>
+
+            <div>
+              <span><ShieldCheck size={15} /></span>
+              <strong>Review first</strong>
+              <small>Decision support</small>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="qora-auth-form-side"
+          aria-label="Authentication"
+        >
+          <div className="qora-auth-form-card">
+            <div className="qora-auth-form-heading">
+              <h2>
+                {mode === "signin"
+                  ? "Welcome back."
+                  : "Create your account."}
+              </h2>
+
+              <p>
+                {mode === "signin"
+                  ? "Masuk untuk melanjutkan pemeriksaan radiograf menggunakan QORA."
+                  : "Buat akun untuk mulai menggunakan QORA."}
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-neutral-500">
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${online ? "bg-black" : "bg-neutral-400"
-                  }`}
-              />
-              <span>
-                {online
-                  ? `Backend online (${device})`
-                  : "Backend offline"}
-              </span>
+            <div
+              className="qora-auth-tabs"
+              role="tablist"
+              aria-label="Authentication mode"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "signin"}
+                onClick={() => changeMode("signin")}
+                className={
+                  mode === "signin" ? "is-active" : ""
+                }
+              >
+                Sign in
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "signup"}
+                onClick={() => changeMode("signup")}
+                className={
+                  mode === "signup" ? "is-active" : ""
+                }
+              >
+                Create account
+              </button>
             </div>
-          </section>
 
-          {/* Sign in and sign up panel */}
-          <section className="lg:col-span-5">
-            <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8">
-              <div className="mb-7 flex rounded-xl bg-neutral-100 p-1">
-                <button
-                  type="button"
-                  onClick={() => changeMode("signin")}
-                  className={`flex-1 rounded-lg py-2.5 text-xs font-bold transition-all ${mode === "signin"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-neutral-500 hover:text-black"
-                    }`}
-                >
-                  Masuk (Sign In)
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => changeMode("signup")}
-                  className={`flex-1 rounded-lg py-2.5 text-xs font-bold transition-all ${mode === "signup"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-neutral-500 hover:text-black"
-                    }`}
-                >
-                  Daftar (Sign Up)
-                </button>
+            {error && (
+              <div
+                role="alert"
+                className="qora-auth-message is-error"
+              >
+                <AlertCircle size={16} />
+                <span>{error}</span>
               </div>
+            )}
 
-              <div className="mb-6">
-                <h2 className="text-xl font-bold tracking-tight text-neutral-950">
-                  {mode === "signin"
-                    ? "Selamat Datang Kembali"
-                    : "Registrasi Akun Baru QORA"}
-                </h2>
-
-                <p className="mt-1 text-xs leading-relaxed text-neutral-500">
-                  {mode === "signin"
-                    ? "Masukkan email atau username dan kata sandi untuk masuk ke sistem."
-                    : "Lengkapi informasi berikut untuk membuat akun QORA."}
-                </p>
+            {successMsg && (
+              <div
+                role="status"
+                className="qora-auth-message"
+              >
+                <CheckCircle2 size={16} />
+                <span>{successMsg}</span>
               </div>
+            )}
 
-              {error && (
-                <div
-                  role="alert"
-                  className="mb-4 flex items-start gap-2.5 rounded-xl border border-neutral-300 bg-neutral-50 p-3 text-xs text-neutral-900"
-                >
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span className="leading-snug">{error}</span>
+            <form
+              onSubmit={handleSubmit}
+              className="qora-auth-form"
+            >
+              {mode === "signin" ? (
+                <div className="qora-field">
+                  <label htmlFor="qora-identifier">
+                    Email or username
+                  </label>
+
+                  <div className="qora-input-wrap">
+                    <User size={16} />
+
+                    <input
+                      id="qora-identifier"
+                      type="text"
+                      autoComplete="username"
+                      required
+                      value={identifier}
+                      onChange={(e) =>
+                        setIdentifier(e.target.value)
+                      }
+                      placeholder="example@gmail.com"
+                    />
+                  </div>
                 </div>
-              )}
-
-              {successMsg && (
-                <div
-                  role="status"
-                  className="mb-4 flex items-start gap-2.5 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-800"
-                >
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span className="leading-snug">{successMsg}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === "signin" ? (
-                  <div>
-                    <label
-                      htmlFor="qora-identifier"
-                      className={labelClass}
-                    >
-                      Email atau Username
+              ) : (
+                <>
+                  <div className="qora-field">
+                    <label htmlFor="qora-email">
+                      Email address
                     </label>
 
-                    <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-neutral-400">
-                        <User className="h-4 w-4" />
-                      </div>
+                    <div className="qora-input-wrap">
+                      <Mail size={16} />
 
                       <input
-                        id="qora-identifier"
-                        type="text"
-                        autoComplete="username"
+                        id="qora-email"
+                        type="email"
+                        autoComplete="email"
                         required
-                        value={identifier}
+                        value={email}
                         onChange={(e) =>
-                          setIdentifier(e.target.value)
+                          setEmail(e.target.value)
                         }
-                        placeholder="example@gmail.com"
-                        className={inputClass}
+                        placeholder="you@example.com"
                       />
                     </div>
                   </div>
+
+                  <div className="qora-field">
+                    <label htmlFor="qora-username">
+                      Username
+                    </label>
+
+                    <div className="qora-input-wrap">
+                      <User size={16} />
+
+                      <input
+                        id="qora-username"
+                        type="text"
+                        autoComplete="nickname"
+                        required
+                        minLength={3}
+                        pattern="[^\s]+"
+                        title="Username minimal 3 karakter dan tanpa spasi."
+                        value={username}
+                        onChange={(e) =>
+                          setUsername(e.target.value)
+                        }
+                        placeholder="your username"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="qora-field">
+                <label htmlFor="qora-password">
+                  Password
+                </label>
+
+                <div className="qora-input-wrap">
+                  <Lock size={16} />
+
+                  <input
+                    id="qora-password"
+                    type={
+                      showPassword ? "text" : "password"
+                    }
+                    autoComplete={
+                      mode === "signin"
+                        ? "current-password"
+                        : "new-password"
+                    }
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) =>
+                      setPassword(e.target.value)
+                    }
+                    placeholder="Enter your password"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowPassword((value) => !value)
+                    }
+                    aria-label={
+                      showPassword
+                        ? "Sembunyikan sandi"
+                        : "Tampilkan sandi"
+                    }
+                    className="qora-password-toggle"
+                  >
+                    {showPassword
+                      ? <EyeOff size={16} />
+                      : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="qora-button qora-button-dark qora-auth-submit"
+              >
+                {loading ? (
+                  <>
+                    <span className="qora-processing-spinner" />
+                    Processing…
+                  </>
                 ) : (
                   <>
-                    <div>
-                      <label
-                        htmlFor="qora-email"
-                        className={labelClass}
-                      >
-                        Alamat Email
-                      </label>
-
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-neutral-400">
-                          <Mail className="h-4 w-4" />
-                        </div>
-
-                        <input
-                          id="qora-email"
-                          type="email"
-                          autoComplete="email"
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="example@gmail.com"
-                          className={inputClass}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="qora-username"
-                        className={labelClass}
-                      >
-                        Username
-                      </label>
-
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-neutral-400">
-                          <User className="h-4 w-4" />
-                        </div>
-
-                        <input
-                          id="qora-username"
-                          type="text"
-                          autoComplete="nickname"
-                          required
-                          minLength={3}
-                          pattern="[^\s]+"
-                          title="Username minimal 3 karakter dan tanpa spasi."
-                          value={username}
-                          onChange={(e) =>
-                            setUsername(e.target.value)
-                          }
-                          placeholder="contoh: Ryveline"
-                          className={inputClass}
-                        />
-                      </div>
-                    </div>
+                    {mode === "signin"
+                      ? "Enter QORA"
+                      : "Create account"}
+                    <ArrowRight size={16} />
                   </>
                 )}
+              </button>
+            </form>
 
-                <div>
-                  <label
-                    htmlFor="qora-password"
-                    className={labelClass}
-                  >
-                    Kata Sandi (Password)
-                  </label>
-
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-neutral-400">
-                      <Lock className="h-4 w-4" />
-                    </div>
-
-                    <input
-                      id="qora-password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete={
-                        mode === "signin"
-                          ? "current-password"
-                          : "new-password"
-                      }
-                      required
-                      minLength={6}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="password"
-                      className={`${inputClass} pr-10`}
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowPassword((value) => !value)
-                      }
-                      className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-neutral-400 hover:text-black"
-                      aria-label={
-                        showPassword
-                          ? "Sembunyikan sandi"
-                          : "Tampilkan sandi"
-                      }
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-black py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-neutral-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Memproses...
-                    </span>
-                  ) : (
-                    <>
-                      <span>
-                        {mode === "signin"
-                          ? "Masuk ke Sistem"
-                          : "Daftar Akun"}
-                      </span>
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-              </form>
-
-              <div className="mt-6 flex flex-col gap-2 border-t border-neutral-100 pt-5">
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 py-2.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100 hover:text-black"
-                >
-                  ⚡ Gunakan Akun Demo
-                </button>
-
-                <p className="text-center text-[11px] leading-relaxed text-neutral-400">
-                </p>
-              </div>
+            <div className="qora-auth-divider">
+              <span />
+              <small>OR</small>
+              <span />
             </div>
-          </section>
-        </div>
+
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              className="qora-demo-button"
+            >
+              Fill demo credentials
+              <ArrowRight size={14} />
+            </button>
+          </div>
+
+          <div className="qora-auth-security">
+            <ShieldCheck size={14} />
+            <span>
+              Secure access to your clinical workspace
+            </span>
+          </div>
+        </section>
       </main>
 
-      <footer className="border-t border-neutral-200 bg-white/80 py-4 text-center text-xs text-neutral-500">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 sm:flex-row">
-          <span>
-            &copy; {new Date().getFullYear()} QORA Radiograph Analysis · RJ EST. 2026. All rights reserved.
-          </span>
-
-          <span className="text-[11px] text-neutral-400">
-            Quantum-Classical Hybrid Machine Learning for Thoracic Healthcare
-          </span>
-        </div>
+      <footer className="qora-auth-footer">
+        <span>
+          © {new Date().getFullYear()} QORA Radiograph Analysis · RJ EST. 2026
+        </span>
       </footer>
     </div>
   );

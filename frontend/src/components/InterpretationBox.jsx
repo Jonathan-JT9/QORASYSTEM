@@ -58,13 +58,6 @@ export default function InterpretationBox({ text, loading = false }) {
           </div>
         )}
       </div>
-
-      <div className="flex gap-3 rounded-xl border border-neutral-300 bg-neutral-100 p-4">
-        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-black" />
-        <p className="text-sm leading-relaxed text-neutral-600">
-          <strong className="text-black">Peringatan Klinis:</strong> Hasil interpretasi AI merupakan alat bantu keputusan klinis dan tidak menggantikan pembacaan radiologi formal, pemeriksaan klinis, atau konfirmasi laboratorium.
-        </p>
-      </div>
     </div>
   );
 }
