@@ -17,6 +17,8 @@ import {
   Building,
   Stethoscope,
   Filter,
+  X,
+  Shield,
 } from "lucide-react";
 import { supabase } from "../services/supabase.js";
 import { getDocumentSignedUrl } from "../services/auth.js";
@@ -32,10 +34,30 @@ export default function AdminDashboard({ currentUser, onLogout }) {
   const [activeTab, setActiveTab] = useState("pending"); // pending | approved | rejected | suspended | all | audit
   const [search, setSearch] = useState("");
 
+  // Approval modal state
+  const [approvingDoctor, setApprovingDoctor] = useState(null);
+
   // Rejection modal state
   const [rejectingDoctor, setRejectingDoctor] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
+
+  // Suspend modal state
+  const [suspendingDoctor, setSuspendingDoctor] = useState(null);
+
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Close modals on Escape key
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === "Escape" && !actionLoading) {
+        setApprovingDoctor(null);
+        setRejectingDoctor(null);
+        setSuspendingDoctor(null);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [actionLoading]);
 
   const fetchAdminData = useCallback(async () => {
     if (!supabase) return;
@@ -94,14 +116,13 @@ export default function AdminDashboard({ currentUser, onLogout }) {
     }
   }
 
-  async function handleApprove(doctor) {
-    if (
-      !window.confirm(
-        `Setujui pendaftaran dokter ${doctor.full_name || doctor.username}? Dokter ini akan dapat mengakses workspace analisis radiograf toraks QORA.`
-      )
-    ) {
-      return;
-    }
+  function openApproveModal(doctor) {
+    setApprovingDoctor(doctor);
+  }
+
+  async function handleConfirmApprove() {
+    if (!approvingDoctor) return;
+    const doctor = approvingDoctor;
 
     setActionLoading(true);
     setError("");
@@ -127,11 +148,17 @@ export default function AdminDashboard({ currentUser, onLogout }) {
       await supabase.from("admin_audit_logs").insert({
         admin_id: currentUser.id,
         target_user_id: doctor.id,
-        action: doctor.status === "rejected" || doctor.status === "suspended" ? "reinstate" : "approve",
+        action:
+          doctor.status === "rejected" || doctor.status === "suspended"
+            ? "reinstate"
+            : "approve",
         rejection_reason: null,
       });
 
-      setSuccessMsg(`Dokter ${doctor.full_name || doctor.username} berhasil disetujui.`);
+      setSuccessMsg(
+        `Dokter ${doctor.full_name || doctor.username} berhasil disetujui.`
+      );
+      setApprovingDoctor(null);
       await fetchAdminData();
     } catch (err) {
       setError(err.message || "Gagal menyetujui akun dokter.");
@@ -191,14 +218,13 @@ export default function AdminDashboard({ currentUser, onLogout }) {
     }
   }
 
-  async function handleSuspend(doctor) {
-    if (
-      !window.confirm(
-        `Tangguhkan akun dokter ${doctor.full_name || doctor.username}? Akses ke workspace klinis akan langsung diblokir.`
-      )
-    ) {
-      return;
-    }
+  function openSuspendModal(doctor) {
+    setSuspendingDoctor(doctor);
+  }
+
+  async function handleConfirmSuspend() {
+    if (!suspendingDoctor) return;
+    const doctor = suspendingDoctor;
 
     setActionLoading(true);
     setError("");
@@ -224,7 +250,10 @@ export default function AdminDashboard({ currentUser, onLogout }) {
         action: "suspend",
       });
 
-      setSuccessMsg(`Akun ${doctor.full_name || doctor.username} berhasil ditangguhkan.`);
+      setSuccessMsg(
+        `Akun ${doctor.full_name || doctor.username} berhasil ditangguhkan.`
+      );
+      setSuspendingDoctor(null);
       await fetchAdminData();
     } catch (err) {
       setError(err.message || "Gagal menangguhkan akun.");
@@ -726,7 +755,7 @@ export default function AdminDashboard({ currentUser, onLogout }) {
                                   <button
                                     type="button"
                                     disabled={actionLoading}
-                                    onClick={() => handleApprove(doc)}
+                                    onClick={() => openApproveModal(doc)}
                                     className="inline-flex items-center gap-1.5 rounded-lg bg-black px-3.5 py-1.5 text-xs font-bold text-white hover:bg-neutral-800 transition disabled:opacity-50"
                                   >
                                     <UserCheck size={14} />
@@ -749,7 +778,7 @@ export default function AdminDashboard({ currentUser, onLogout }) {
                                 <button
                                   type="button"
                                   disabled={actionLoading}
-                                  onClick={() => handleSuspend(doc)}
+                                  onClick={() => openSuspendModal(doc)}
                                   className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-neutral-500 hover:text-black transition disabled:opacity-50"
                                 >
                                   <Lock size={13} />
@@ -761,7 +790,7 @@ export default function AdminDashboard({ currentUser, onLogout }) {
                                 <button
                                   type="button"
                                   disabled={actionLoading}
-                                  onClick={() => handleApprove(doc)}
+                                  onClick={() => openApproveModal(doc)}
                                   className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition disabled:opacity-50"
                                 >
                                   <CheckCircle2 size={14} />
@@ -844,23 +873,185 @@ export default function AdminDashboard({ currentUser, onLogout }) {
         </div>
       </main>
 
+      {/* Approval Confirmation Modal */}
+      {approvingDoctor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-md animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="approve-modal-title"
+        >
+          <div className="relative w-full max-w-lg rounded-2xl border border-neutral-300 bg-white p-6 sm:p-7 shadow-2xl space-y-5 text-neutral-900">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-neutral-200 pb-4">
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-700">
+                  <UserCheck size={22} strokeWidth={2.2} />
+                </div>
+                <div>
+                  <span className="inline-flex items-center gap-1 rounded border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+                    <CheckCircle2 size={11} /> Konfirmasi Otorisasi Akses
+                  </span>
+                  <h3
+                    id="approve-modal-title"
+                    className="text-lg font-bold tracking-tight text-black sm:text-xl mt-0.5"
+                  >
+                    {approvingDoctor.status === "rejected" ||
+                    approvingDoctor.status === "suspended"
+                      ? "Pulihkan & Setujui Akun Dokter"
+                      : "Setujui Registrasi Dokter"}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setApprovingDoctor(null)}
+                disabled={actionLoading}
+                className="text-neutral-400 hover:text-black transition p-1"
+                aria-label="Tutup"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Doctor Card Preview */}
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-black text-white text-sm font-bold">
+                  {(
+                    approvingDoctor.full_name ||
+                    approvingDoctor.username ||
+                    "D"
+                  )
+                    .charAt(0)
+                    .toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-sm text-neutral-900 truncate">
+                    {approvingDoctor.full_name || approvingDoctor.username}
+                  </div>
+                  <div className="text-xs text-neutral-500 font-mono truncate">
+                    @{approvingDoctor.username} · {approvingDoctor.email}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-neutral-200/80 text-xs text-neutral-700">
+                <div className="flex items-center gap-1.5">
+                  <Stethoscope size={13} className="text-neutral-500 flex-shrink-0" />
+                  <span className="truncate">
+                    {approvingDoctor.specialty || "Spesialisasi belum ada"}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Building size={13} className="text-neutral-500 flex-shrink-0" />
+                  <span className="truncate">
+                    {approvingDoctor.institution || "Instansi belum ada"}
+                  </span>
+                </div>
+
+                <div className="sm:col-span-2 flex items-center justify-between gap-2 pt-1 font-mono text-[11px] text-neutral-600 border-t border-dashed border-neutral-200">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <FileText size={13} className="text-neutral-500 flex-shrink-0" />
+                    <span>
+                      STR: <strong>{approvingDoctor.str_number || "-"}</strong>
+                    </span>
+                    {approvingDoctor.str_expiry && (
+                      <span className="text-neutral-400">
+                        (Exp: {approvingDoctor.str_expiry})
+                      </span>
+                    )}
+                  </div>
+
+                  {approvingDoctor.str_document_path && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDocument(approvingDoctor.str_document_path)}
+                      className="inline-flex items-center gap-1 rounded bg-white px-2 py-0.5 text-[11px] font-semibold text-neutral-800 border border-neutral-300 hover:border-black transition flex-shrink-0"
+                    >
+                      <ExternalLink size={10} />
+                      <span>Berkas STR</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Impact Explanation */}
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Dengan menyetujui, akun dokter akan berstatus{" "}
+              <strong className="text-black">Disetujui (Approved)</strong> dan seluruh
+              pembatasan di workspace klinis <strong>QORA</strong> akan langsung dicabut.
+              Dokter ini dapat melakukan analisis radiograf toraks HQCNN, visualisasi
+              Grad-CAM, serta konsultasi AI klinis.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-200">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => setApprovingDoctor(null)}
+                className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition disabled:opacity-50"
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={handleConfirmApprove}
+                className="flex items-center gap-2 rounded-xl bg-black px-5 py-2 text-xs font-bold text-white hover:bg-neutral-800 transition disabled:opacity-50 shadow-sm"
+              >
+                {actionLoading ? (
+                  <>
+                    <span className="qora-processing-spinner" />
+                    <span>Memproses Persetujuan…</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={15} />
+                    <span>Konfirmasi & Berikan Akses</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Rejection Modal */}
       {rejectingDoctor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-neutral-300 bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
-              <div className="flex items-center gap-2 text-red-700">
-                <AlertTriangle size={18} />
-                <h3 className="font-bold text-base text-black">
-                  Tolak Pendaftaran Dokter
-                </h3>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-md animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reject-modal-title"
+        >
+          <div className="relative w-full max-w-lg rounded-2xl border border-neutral-300 bg-white p-6 sm:p-7 shadow-2xl space-y-4 text-neutral-900">
+            <div className="flex items-start justify-between border-b border-neutral-200 pb-3">
+              <div className="flex items-center gap-2.5 text-red-700">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-red-300 bg-red-50 text-red-700">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h3 id="reject-modal-title" className="font-bold text-base text-black">
+                    Tolak Pendaftaran Dokter
+                  </h3>
+                  <span className="text-[11px] text-neutral-500 font-mono">
+                    @{rejectingDoctor.username}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setRejectingDoctor(null)}
-                className="text-neutral-400 hover:text-black"
+                disabled={actionLoading}
+                className="text-neutral-400 hover:text-black transition p-1"
+                aria-label="Tutup"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
@@ -876,7 +1067,7 @@ export default function AdminDashboard({ currentUser, onLogout }) {
             <form onSubmit={handleConfirmReject} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  Alasan Penolakan (Opsional / Dianjurkan)
+                  Alasan Penolakan (Wajib diisi sebagai catatan revisi dokter)
                 </label>
                 <textarea
                   rows={3}
@@ -888,11 +1079,12 @@ export default function AdminDashboard({ currentUser, onLogout }) {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-neutral-200">
                 <button
                   type="button"
                   onClick={() => setRejectingDoctor(null)}
-                  className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition"
+                  disabled={actionLoading}
+                  className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition disabled:opacity-50"
                 >
                   Batal
                 </button>
@@ -905,6 +1097,73 @@ export default function AdminDashboard({ currentUser, onLogout }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Suspend Confirmation Modal */}
+      {suspendingDoctor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-md animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="suspend-modal-title"
+        >
+          <div className="relative w-full max-w-lg rounded-2xl border border-neutral-300 bg-white p-6 sm:p-7 shadow-2xl space-y-4 text-neutral-900">
+            <div className="flex items-start justify-between border-b border-neutral-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-neutral-300 bg-neutral-100 text-neutral-800">
+                  <Lock size={20} />
+                </div>
+                <div>
+                  <h3 id="suspend-modal-title" className="font-bold text-base text-black">
+                    Tangguhkan Akses Dokter
+                  </h3>
+                  <span className="text-[11px] text-neutral-500 font-mono">
+                    @{suspendingDoctor.username}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSuspendingDoctor(null)}
+                disabled={actionLoading}
+                className="text-neutral-400 hover:text-black transition p-1"
+                aria-label="Tutup"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Anda akan menangguhkan akun dokter{" "}
+              <strong>
+                {suspendingDoctor.full_name || suspendingDoctor.username}
+              </strong>
+              . Akses dokter ke workspace analisis radiograf toraks QORA akan
+              langsung dinonaktifkan sementara hingga dipulihkan kembali oleh
+              administrator.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-neutral-200">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => setSuspendingDoctor(null)}
+                className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition disabled:opacity-50"
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={handleConfirmSuspend}
+                className="flex items-center gap-1.5 rounded-xl bg-neutral-900 px-4 py-2 text-xs font-bold text-white hover:bg-black transition disabled:opacity-50"
+              >
+                {actionLoading ? "Memproses…" : "Konfirmasi Tangguhkan"}
+              </button>
+            </div>
           </div>
         </div>
       )}
