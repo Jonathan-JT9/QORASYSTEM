@@ -10,6 +10,9 @@ import InterpretationBox from "./components/InterpretationBox.jsx";
 import ClinicalChatbot from "./components/ClinicalChatbot.jsx";
 import HistoryTable from "./components/HistoryTable.jsx";
 import CxrEducationSection from "./components/CxrEducationSection.jsx";
+import AdminDashboard from "./components/AdminDashboard.jsx";
+import RestrictedAccessDialog from "./components/RestrictedAccessDialog.jsx";
+import DoctorCredentialModal from "./components/DoctorCredentialModal.jsx";
 import {
   fetchApiHistory,
   getHealth,
@@ -19,9 +22,10 @@ import {
 import {
   fetchExamHistory,
   insertExamHistory,
+  supabase,
   supabaseConfigured,
 } from "./services/supabase.js";
-import { getStoredUser, signOut } from "./services/auth.js";
+import { getCurrentUser, signOut } from "./services/auth.js";
 import {
   Activity,
   ArrowRight,
@@ -83,7 +87,8 @@ function StatCard({ icon: Icon, label, value, detail }) {
 }
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(getStoredUser);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [page, setPage] = useState(getPage);
   const [health, setHealth] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -94,13 +99,48 @@ export default function App() {
   const [previewName, setPreviewName] = useState("");
   const [preview, setPreview] = useState("");
   const [history, setHistory] = useState([]);
+  const [credentialModalOpen, setCredentialModalOpen] = useState(false);
   const replacementFileInput = useRef(null);
   const requestId = useRef(0);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    } catch {
+      setCurrentUser(null);
+    } finally {
+      setAuthChecking(false);
+    }
+  }, []);
 
   const handleLogout = useCallback(async () => {
     await signOut();
     setCurrentUser(null);
   }, []);
+
+  useEffect(() => {
+    refreshUser();
+
+    if (supabase) {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (event) => {
+        if (
+          event === "SIGNED_IN" ||
+          event === "TOKEN_REFRESHED" ||
+          event === "USER_UPDATED"
+        ) {
+          const user = await getCurrentUser();
+          setCurrentUser(user);
+        } else if (event === "SIGNED_OUT") {
+          setCurrentUser(null);
+        }
+      });
+
+      return () => subscription?.unsubscribe();
+    }
+  }, [refreshUser]);
 
   useEffect(() => {
     function navigate() {
@@ -116,6 +156,10 @@ export default function App() {
   }, [page]);
 
   const refreshHistory = useCallback(async () => {
+    if (currentUser?.role === "doctor" && currentUser?.status !== "approved") {
+      setHistory([]);
+      return;
+    }
     try {
       if (supabaseConfigured) {
         setHistory(await fetchExamHistory());
@@ -125,7 +169,7 @@ export default function App() {
     } catch {
       setHistory(await fetchApiHistory().catch(() => []));
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     getHealth().then(setHealth).catch(() => setHealth({ ok: false }));
@@ -139,6 +183,13 @@ export default function App() {
   }, [preview]);
 
   async function handleFile(file) {
+    if (currentUser?.role === "doctor" && currentUser?.status !== "approved") {
+      setError(
+        "Akses analisis dinonaktifkan. Kredensial medis Anda belum disetujui administrator."
+      );
+      return;
+    }
+
     const currentRequest = ++requestId.current;
 
     setError("");
@@ -219,6 +270,22 @@ export default function App() {
     }
   }
 
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-[#fbfbf9] flex flex-col items-center justify-center text-center p-6">
+        <img
+          src="/tiny-logo.png"
+          alt="QORA"
+          className="h-10 w-10 mb-4 animate-pulse"
+        />
+        <span className="qora-processing-spinner" />
+        <span className="text-xs font-semibold text-neutral-600 mt-3">
+          Memverifikasi sesi kredensial QORA…
+        </span>
+      </div>
+    );
+  }
+
   if (!currentUser) {
     return (
       <LandingPage
@@ -227,6 +294,20 @@ export default function App() {
       />
     );
   }
+
+  // 1. Role Administrator: akses langsung ke Admin Dashboard
+  if (currentUser.role === "admin") {
+    return (
+      <AdminDashboard
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  // 2. Role Dokter: jika status belum disetujui, aktifkan mode pembatasan (restricted)
+  const isDoctorRestricted =
+    currentUser.role === "doctor" && currentUser.status !== "approved";
 
   const tbCount = history.filter(
     (row) => (row.label || row.predicted_label) === "TB",
@@ -239,13 +320,24 @@ export default function App() {
   const online = Boolean(health?.ok);
 
   return (
-    <div className="qora-app min-h-screen text-neutral-900 selection:bg-black selection:text-white">
-      <Header
-        health={health}
-        page={page}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-      />
+    <div
+      className={`qora-app min-h-screen text-neutral-900 selection:bg-black selection:text-white ${
+        isDoctorRestricted ? "overflow-hidden h-screen" : ""
+      }`}
+    >
+      {/* Background Clinical Workspace (Blurred & Disabled when restricted) */}
+      <div
+        className={isDoctorRestricted ? "qora-workspace-restricted" : undefined}
+        aria-hidden={isDoctorRestricted ? true : undefined}
+        inert={isDoctorRestricted ? "" : undefined}
+      >
+        <Header
+          health={health}
+          page={page}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          onOpenCredentials={() => setCredentialModalOpen(true)}
+        />
 
       <main className="qora-main">
         {/* HOME */}
@@ -695,6 +787,28 @@ export default function App() {
       </main>
 
       <Footer />
+      </div>
+
+      {/* Foreground Restricted Access Dialog */}
+      {isDoctorRestricted && !credentialModalOpen && (
+        <RestrictedAccessDialog
+          currentUser={currentUser}
+          onOpenCredentials={() => setCredentialModalOpen(true)}
+          onRefresh={refreshUser}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {/* Multi-Step Doctor Credential Submission Modal */}
+      <DoctorCredentialModal
+        isOpen={credentialModalOpen}
+        onClose={() => setCredentialModalOpen(false)}
+        currentUser={currentUser}
+        onSuccess={async () => {
+          await refreshUser();
+          setCredentialModalOpen(false);
+        }}
+      />
     </div>
   );
 }

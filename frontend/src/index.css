@@ -3836,3 +3836,27 @@ img {
     height: 17px;
   }
 }
+
+/* Doctor restricted access overlay & blurred background */
+.qora-workspace-restricted {
+  filter: blur(8px);
+  opacity: 0.55;
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: filter 300ms ease, opacity 300ms ease;
+}
+
+@keyframes qoraFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: qoraFadeIn 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

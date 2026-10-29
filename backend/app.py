@@ -14,6 +14,9 @@ from gemini_service import answer_chat_query, interpret_prediction
 from image_validator import validate_chest_xray
 from gradcam import generate_gradcam_data_url, generate_gradcam_result
 from model_loader import load_model,pil_from_bytes,predict_image
+import time
+from functools import wraps
+import requests
 
 ROOT=Path(__file__).resolve().parent
 load_dotenv(ROOT.parent/".env")
@@ -21,6 +24,9 @@ load_dotenv(ROOT/".env",override=True)
 
 logging.basicConfig(level=logging.INFO,format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger=logging.getLogger("qora")
+
+SUPABASE_URL=os.getenv("SUPABASE_URL","https://cyekxuupfkgyuawforpd.supabase.co")
+SUPABASE_ANON_KEY=os.getenv("SUPABASE_ANON_KEY","sb_publishable_ejvKK9J06eFvGzvLXabJ3A_fo4bswuQ")
 
 ALLOWED_EXTENSIONS={".png",".jpg",".jpeg",".bmp",".webp",".tif",".tiff"}
 MAX_HISTORY=50
@@ -46,6 +52,91 @@ CORS(app,resources={
 })
 
 SESSION_HISTORY:list[dict]=[]
+
+_AUTH_CACHE:dict[str,tuple[dict,float]]={}
+
+def get_authenticated_user(req)->tuple[dict|None,str|None,int]:
+    auth_header=req.headers.get("Authorization","").strip()
+    if not auth_header.startswith("Bearer "):
+        return None,"Otentikasi diperlukan. Header Authorization tidak ditemukan.",401
+
+    token=auth_header.split(" ",1)[1].strip()
+    if not token:
+        return None,"Token otentikasi kosong.",401
+
+    now=time.time()
+    if token in _AUTH_CACHE:
+        cached_user,expire_at=_AUTH_CACHE[token]
+        if now<expire_at:
+            return cached_user,None,200
+
+    try:
+        user_res=requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={"Authorization":f"Bearer {token}","apikey":SUPABASE_ANON_KEY},
+            timeout=5
+        )
+        if user_res.status_code!=200:
+            return None,"Sesi otentikasi tidak valid atau telah kedaluwarsa. Silakan masuk kembali.",401
+
+        user_data=user_res.json()
+        user_id=user_data.get("id")
+
+        prof_res=requests.get(
+            f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=role,status,username,full_name",
+            headers={"Authorization":f"Bearer {token}","apikey":SUPABASE_ANON_KEY},
+            timeout=5
+        )
+
+        role="doctor"
+        status="pending"
+        if prof_res.status_code==200 and prof_res.json():
+            prof=prof_res.json()[0]
+            role=prof.get("role","doctor")
+            status=prof.get("status","pending")
+        else:
+            meta=user_data.get("user_metadata",{})
+            role=meta.get("role","doctor")
+            status=meta.get("status","pending")
+
+        user_info={
+            "id":user_id,
+            "email":user_data.get("email"),
+            "role":role,
+            "status":status
+        }
+
+        _AUTH_CACHE[token]=(user_info,now+60)
+        return user_info,None,200
+
+    except Exception as exc:
+        logger.warning("Supabase token verification error: %s",exc)
+        return None,"Layanan otentikasi sedang tidak dapat dihubungi. Silakan coba kembali.",503
+
+def require_approved_access(f):
+    @wraps(f)
+    def decorated_function(*args,**kwargs):
+        user,err_msg,status_code=get_authenticated_user(request)
+        if not user:
+            return jsonify({"error":"UNAUTHORIZED","message":err_msg}),status_code
+
+        if user.get("role")=="admin":
+            return f(*args,**kwargs)
+
+        if user.get("status")!="approved":
+            status_text={
+                "pending":"sedang menunggu verifikasi kredensial medis oleh Administrator",
+                "rejected":"telah ditolak oleh Administrator",
+                "suspended":"telah ditangguhkan oleh Administrator"
+            }.get(user.get("status"),user.get("status"))
+
+            return jsonify({
+                "error":"ACCOUNT_NOT_APPROVED",
+                "message":f"Akses ditolak. Akun dokter Anda {status_text}. Akses workspace analisis citra hanya diberikan untuk dokter terverifikasi."
+            }),403
+
+        return f(*args,**kwargs)
+    return decorated_function
 
 @lru_cache(maxsize=1)
 def get_bundle():
@@ -85,6 +176,7 @@ def health():
         }),503
 
 @app.post("/api/predict")
+@require_approved_access
 def predict():
     if "image" not in request.files:
         return jsonify({"error":"Field 'image' is required."}),400
@@ -198,6 +290,7 @@ def predict():
     return jsonify(payload),200
 
 @app.post("/api/interpret")
+@require_approved_access
 def interpret():
     body=request.get_json(silent=True)
 
@@ -272,6 +365,7 @@ def interpret():
         }),502
 
 @app.post("/api/chat")
+@require_approved_access
 def chat():
     body=request.get_json(silent=True)
     if not isinstance(body,dict):

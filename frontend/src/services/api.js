@@ -1,8 +1,25 @@
 import axios from "axios";
+import { supabase } from "./supabase.js";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/",
-  timeout: 0
+  timeout: 0,
+});
+
+// Interceptor untuk menyisipkan Supabase JWT token pada setiap request ke API backend
+api.interceptors.request.use(async (config) => {
+  if (supabase) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (err) {
+      console.warn("Gagal menyisipkan auth token:", err);
+    }
+  }
+  return config;
 });
 
 export async function getHealth() {
@@ -33,12 +50,17 @@ export async function saveApiHistory(entry) {
   return data;
 }
 
-export async function sendChatMessage({ prediction_id, message, history = [], context = {} }) {
+export async function sendChatMessage({
+  prediction_id,
+  message,
+  history = [],
+  context = {},
+}) {
   const { data } = await api.post("/api/chat", {
     prediction_id,
     message,
     history,
-    context
+    context,
   });
   return data;
 }
