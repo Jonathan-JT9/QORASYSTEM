@@ -600,9 +600,9 @@ export default function App() {
                   <div className="qora-processing-state" role="status">
                     <span className="qora-processing-spinner" />
                     <div>
-                      <strong>Analyzing radiograph</strong>
+                      <strong>Memproses analisis radiograf</strong>
                       <span>
-                        Menjalankan inferensi HQCNN dan mengekstrak Grad-CAM…
+                        Validasi Gemini Vision & CLIP, inferensi HQCNN, dan Grad-CAM…
                       </span>
                     </div>
                   </div>
@@ -610,7 +610,7 @@ export default function App() {
 
                 {error && (
                   <div className="qora-inline-error" role="alert">
-                    <strong>Analisis gagal</strong>
+                    <strong>Validasi atau analisis tidak dapat dilanjutkan</strong>
                     <span>{error}</span>
                   </div>
                 )}

@@ -1,9 +1,12 @@
 """Gemini AI interpretation for QORA."""
 from __future__ import annotations
+import json
 import logging
 import os
+import re
 import time
 from functools import lru_cache
+from PIL import Image
 from google import genai
 from google.genai import types
 
@@ -229,3 +232,216 @@ def answer_chat_query(
             time.sleep(RETRY_DELAYS[min(attempt - 1, len(RETRY_DELAYS) - 1)])
 
     raise RuntimeError("Gemini chat failed after maximum attempts.")
+
+
+VALIDATION_MESSAGES = {
+    "SUPPORTED_CHEST_XRAY": "Gambar berhasil divalidasi. Melanjutkan klasifikasi...",
+    "NOT_CHEST_XRAY": "Gambar tidak sesuai. Silakan unggah citra Chest X-Ray manusia.",
+    "LATERAL_PROJECTION": "Proyeksi citra tidak didukung. Silakan unggah Chest X-Ray tampak depan (PA/AP).",
+    "COLORIZED_XRAY": "Format tampilan citra tidak didukung. Silakan unggah citra Chest X-Ray grayscale.",
+    "POOR_QUALITY": "Kualitas citra tidak memadai. Silakan unggah gambar yang lebih jelas dan tidak terpotong.",
+    "OTHER_BODY_OR_MODALITY": "Jenis citra tidak didukung. Sistem hanya menerima Chest X-Ray.",
+    "OUT_OF_SCOPE": "Citra mungkin berada di luar cakupan klasifikasi Normal dan Tuberkulosis. Silakan gunakan citra yang sesuai dengan cakupan penelitian.",
+    "UNCERTAIN": "Sistem belum dapat memastikan kesesuaian citra. Silakan unggah citra lain yang lebih jelas.",
+    "SERVICE_ERROR": "Validasi gambar sedang tidak tersedia. Silakan coba kembali beberapa saat lagi.",
+}
+
+GEMINI_VALIDATION_PROMPT = """You are a strict, specialized medical image validator for QORA (Quantum-Optimized Radiograph Analysis).
+QORA's classification pipeline strictly evaluates frontal chest radiographs for binary classification: Normal vs Tuberculosis (TB).
+
+Evaluate the provided image against all the following criteria:
+1. Is it a genuine human chest X-ray (CXR)? Reject selfies, portraits, photos, non-medical images, CT, MRI, ultrasound, or X-rays of other body parts (hand, knee, dental, skull, pelvis, spine).
+2. Projection: Is it a frontal projection (PA or AP)? Lateral or oblique views must be rejected.
+3. Appearance: Is it a conventional grayscale radiograph (black, white, shades of gray)? Artificially colorized or false-color images (red, green, blue tones) must be rejected.
+4. Image quality: Are chest and lung fields sufficiently visible and diagnostic (not severely blurry, corrupted, or severely cropped)?
+5. Scope assessment: Does the image align with the Normal vs Tuberculosis scope? If it clearly exhibits prominent other pulmonary pathologies outside this binary scope (e.g., massive pleural effusion, pneumothorax, pulmonary edema, large lung mass, or severe COVID-19/ARDS), flag it as 'possible_other_disease'.
+6. If the image's suitability or findings cannot be definitively established, return decision='uncertain'.
+
+Allowed values:
+- projection: "PA", "AP", "lateral", "other", "unknown"
+- image_quality: "acceptable", "poor", "uncertain"
+- scope_assessment: "in_scope", "possible_other_disease", "uncertain"
+- decision: "pass", "reject", "uncertain"
+- reason_code:
+  "SUPPORTED_CHEST_XRAY" (when passing)
+  "NOT_CHEST_XRAY" (non-medical, portrait, photo, selfie, document, screenshot)
+  "OTHER_BODY_OR_MODALITY" (CT, MRI, ultrasound, or non-chest X-ray like skull, hand, knee)
+  "LATERAL_PROJECTION" (lateral or side view)
+  "COLORIZED_XRAY" (false-color or RGB colorized X-ray)
+  "POOR_QUALITY" (blurry, corrupted, or severely cropped)
+  "OUT_OF_SCOPE" (findings outside Normal vs TB scope)
+  "UNCERTAIN" (suitability or findings cannot be confirmed)
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "is_chest_xray": boolean,
+  "body_part": string,
+  "projection": "PA" | "AP" | "lateral" | "other" | "unknown",
+  "is_grayscale": boolean,
+  "image_quality": "acceptable" | "poor" | "uncertain",
+  "scope_assessment": "in_scope" | "possible_other_disease" | "uncertain",
+  "decision": "pass" | "reject" | "uncertain",
+  "reason_code": string,
+  "reason": string
+}"""
+
+
+def validate_image_with_gemini(image: Image.Image) -> dict:
+    """Stage 1: Evaluate an uploaded image using Gemini Vision for QORA CXR criteria."""
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
+
+    # Prepare image for Gemini (standard RGB, resize if excessively large)
+    prep_img = image.convert("RGB")
+    max_dim = 1536
+    if max(prep_img.size) > max_dim:
+        scale = max_dim / max(prep_img.size)
+        new_size = (int(prep_img.width * scale), int(prep_img.height * scale))
+        prep_img = prep_img.resize(new_size, Image.Resampling.LANCZOS)
+
+    start_time = time.monotonic()
+    raw_response = None
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            logger.info("Gemini Vision validation started: model=%s attempt=%s/%s", model_name, attempt, MAX_ATTEMPTS)
+            client = get_client()
+            response = client.models.generate_content(
+                model=model_name,
+                contents=[GEMINI_VALIDATION_PROMPT, prep_img],
+                config=types.GenerateContentConfig(
+                    temperature=0.0,
+                    response_mime_type="application/json",
+                    max_output_tokens=500,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
+                )
+            )
+
+            raw_text = (response.text or "").strip()
+            if not raw_text:
+                raise ValueError("Respons Gemini kosong.")
+
+            # Clean potential Markdown code fences
+            clean_json = re.sub(r"^```(?:json)?\s*", "", raw_text, flags=re.IGNORECASE)
+            clean_json = re.sub(r"\s*```$", "", clean_json.strip())
+
+            raw_response = json.loads(clean_json)
+            break
+
+        except Exception as exc:
+            duration = time.monotonic() - start_time
+            logger.warning("Gemini Vision attempt %s failed after %.2fs: %s", attempt, duration, exc)
+            if attempt == MAX_ATTEMPTS:
+                logger.exception("Gemini Vision validation failed all attempts.")
+                return {
+                    "accepted": False,
+                    "stage": "gemini",
+                    "decision": "error",
+                    "reason_code": "SERVICE_ERROR",
+                    "message": VALIDATION_MESSAGES["SERVICE_ERROR"],
+                    "error": str(exc),
+                    "duration": round(duration, 3)
+                }
+            time.sleep(RETRY_DELAYS[min(attempt - 1, len(RETRY_DELAYS) - 1)])
+
+    duration = round(time.monotonic() - start_time, 3)
+
+    if not isinstance(raw_response, dict):
+        return {
+            "accepted": False,
+            "stage": "gemini",
+            "decision": "error",
+            "reason_code": "SERVICE_ERROR",
+            "message": VALIDATION_MESSAGES["SERVICE_ERROR"],
+            "duration": duration
+        }
+
+    # Extract and normalize values
+    is_chest_xray = bool(raw_response.get("is_chest_xray", False))
+    body_part = str(raw_response.get("body_part", "unknown")).lower().strip()
+
+    raw_proj = str(raw_response.get("projection", "unknown")).strip()
+    norm_proj = raw_proj.upper()
+    if norm_proj in ("PA", "AP"):
+        projection = norm_proj
+    elif "LAT" in norm_proj:
+        projection = "lateral"
+    elif norm_proj in ("OTHER", "UNKNOWN"):
+        projection = norm_proj.lower()
+    else:
+        projection = "unknown"
+
+    is_grayscale = bool(raw_response.get("is_grayscale", True))
+
+    raw_quality = str(raw_response.get("image_quality", "uncertain")).lower().strip()
+    image_quality = raw_quality if raw_quality in ("acceptable", "poor", "uncertain") else "uncertain"
+
+    raw_scope = str(raw_response.get("scope_assessment", "uncertain")).lower().strip()
+    scope_assessment = raw_scope if raw_scope in ("in_scope", "possible_other_disease", "uncertain") else "uncertain"
+
+    raw_decision = str(raw_response.get("decision", "uncertain")).lower().strip()
+    decision = raw_decision if raw_decision in ("pass", "reject", "uncertain") else "uncertain"
+
+    reason_code = str(raw_response.get("reason_code", "")).upper().strip()
+    reason = str(raw_response.get("reason", "")).strip()
+
+    # Server-side consistency enforcement
+    non_chest_keywords = ("knee", "hand", "foot", "skull", "dental", "pelvis", "spine", "leg", "arm", "head", "ct", "mri", "ultrasound", "sonogram")
+    is_other_modality_or_body = any(kw in body_part for kw in non_chest_keywords) or body_part in ("brain", "abdomen")
+
+    if not is_chest_xray:
+        decision = "reject"
+        reason_code = "OTHER_BODY_OR_MODALITY" if is_other_modality_or_body else "NOT_CHEST_XRAY"
+    elif body_part not in ("chest", "thorax", "toraks") and is_other_modality_or_body:
+        decision = "reject"
+        reason_code = "OTHER_BODY_OR_MODALITY"
+    elif projection == "lateral":
+        decision = "reject"
+        reason_code = "LATERAL_PROJECTION"
+    elif not is_grayscale:
+        decision = "reject"
+        reason_code = "COLORIZED_XRAY"
+    elif image_quality == "poor":
+        decision = "reject"
+        reason_code = "POOR_QUALITY"
+    elif scope_assessment == "possible_other_disease":
+        decision = "reject"
+        reason_code = "OUT_OF_SCOPE"
+    elif decision == "uncertain" or projection == "unknown" or image_quality == "uncertain" or scope_assessment == "uncertain":
+        decision = "uncertain"
+        reason_code = "UNCERTAIN"
+    elif projection not in ("PA", "AP"):
+        decision = "reject"
+        reason_code = "LATERAL_PROJECTION" if "lat" in projection else "NOT_CHEST_XRAY"
+    elif decision == "pass":
+        if image_quality != "acceptable" or scope_assessment != "in_scope" or projection not in ("PA", "AP"):
+            decision = "uncertain"
+            reason_code = "UNCERTAIN"
+        else:
+            reason_code = "SUPPORTED_CHEST_XRAY"
+    elif decision == "reject" and not reason_code:
+        reason_code = "NOT_CHEST_XRAY"
+
+    accepted = (decision == "pass")
+    message = VALIDATION_MESSAGES.get(reason_code, VALIDATION_MESSAGES["UNCERTAIN"])
+
+    result = {
+        "accepted": accepted,
+        "stage": "gemini",
+        "decision": decision,
+        "reason_code": reason_code,
+        "message": message,
+        "is_chest_xray": is_chest_xray,
+        "body_part": body_part,
+        "projection": projection,
+        "is_grayscale": is_grayscale,
+        "image_quality": image_quality,
+        "scope_assessment": scope_assessment,
+        "reason": reason,
+        "duration": duration
+    }
+
+    logger.info("Gemini Vision validation completed: accepted=%s decision=%s reason_code=%s duration=%.2fs",
+                accepted, decision, reason_code, duration)
+
+    return result

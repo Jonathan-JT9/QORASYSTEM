@@ -150,6 +150,19 @@ export default function PredictionResultCard({ result }) {
 
       </div>
 
+      {/* Validation Verification Badge */}
+      {result.validation && (
+        <div className="mt-3 flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-[11px] text-neutral-700">
+          <span className="flex items-center gap-1.5 font-semibold text-black">
+            <ShieldCheck className="h-3.5 w-3.5 text-black" />
+            Tervalidasi Gemini Vision & CLIP
+          </span>
+          <span className="font-mono text-[10px] text-neutral-500">
+            {result.validation.gemini?.projection || "PA/AP"} · Grayscale
+          </span>
+        </div>
+      )}
+
       <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
         Confidence merupakan skor prediksi model dan bukan ukuran
         kepastian diagnosis klinis.

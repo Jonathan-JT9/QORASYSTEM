@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 from flask import Flask,jsonify,request
 from flask_cors import CORS
 from PIL import Image,UnidentifiedImageError
-from gemini_service import answer_chat_query, interpret_prediction
-from image_validator import validate_chest_xray
+from gemini_service import answer_chat_query, interpret_prediction, validate_image_with_gemini
+from image_validator import validate_clip, validate_chest_xray
 from gradcam import generate_gradcam_data_url, generate_gradcam_result
 from model_loader import load_model,pil_from_bytes,predict_image
 import time
@@ -215,29 +215,72 @@ def predict():
             "message":"Gambar tidak valid atau rusak."
         }),400
     
-    try:
-        validation=validate_chest_xray(image)
+    # Stage 1: Gemini Vision validation
+    logger.info("Starting Validation Stage 1: Gemini Vision...")
+    gemini_result = validate_image_with_gemini(image)
 
-    except Exception:
-        logger.exception("Chest X-Ray validation failed")
-
+    if gemini_result["decision"] == "error":
+        logger.warning("Gemini Vision validation service unavailable: %s", gemini_result.get("error"))
         return jsonify({
-            "error":"CXR_VALIDATION_FAILED",
-            "message":"Sistem tidak dapat memvalidasi jenis gambar saat ini. Silakan coba kembali."
-        }),503
+            "accepted": False,
+            "stage": "gemini",
+            "decision": "error",
+            "reason_code": "SERVICE_ERROR",
+            "error": "VALIDATION_SERVICE_UNAVAILABLE",
+            "message": gemini_result.get("message", "Validasi gambar sedang tidak tersedia. Silakan coba kembali beberapa saat lagi."),
+        }), 503
 
-    if not validation["accepted"]:
+    if gemini_result["decision"] != "pass":
         logger.warning(
-            "Non-CXR image rejected: category=%s chest_score=%.4f",
-            validation["detected_category"],
-            validation["chest_score"]
+            "Validation Stage 1 (Gemini Vision) stopped: decision=%s reason_code=%s reason=%s",
+            gemini_result["decision"],
+            gemini_result["reason_code"],
+            gemini_result.get("reason"),
         )
-
         return jsonify({
-            "error":"INVALID_CHEST_XRAY",
-            "message":"Gambar yang diunggah tidak teridentifikasi sebagai Chest X-Ray. Silakan unggah citra rontgen dada yang memperlihatkan area paru-paru.",
-            "detected_type":validation["detected_label"]
-        }),422
+            "accepted": False,
+            "stage": "gemini",
+            "decision": gemini_result["decision"],
+            "reason_code": gemini_result["reason_code"],
+            "error": f"IMAGE_VALIDATION_{gemini_result['decision'].upper()}",
+            "message": gemini_result["message"],
+            "details": gemini_result,
+        }), 422
+
+    # Stage 2: CLIP validation (only executed if Gemini passed)
+    logger.info("Validation Stage 1 passed. Starting Validation Stage 2: CLIP...")
+    clip_result = validate_clip(image)
+
+    if clip_result["decision"] == "error":
+        logger.warning("CLIP validation service unavailable: %s", clip_result.get("error"))
+        return jsonify({
+            "accepted": False,
+            "stage": "clip",
+            "decision": "error",
+            "reason_code": "SERVICE_ERROR",
+            "error": "VALIDATION_SERVICE_UNAVAILABLE",
+            "message": clip_result.get("message", "Validasi gambar sedang tidak tersedia. Silakan coba kembali beberapa saat lagi."),
+        }), 503
+
+    if clip_result["decision"] != "pass":
+        logger.warning(
+            "Validation Stage 2 (CLIP) stopped: decision=%s reason_code=%s detected=%s",
+            clip_result["decision"],
+            clip_result["reason_code"],
+            clip_result.get("detected_category"),
+        )
+        return jsonify({
+            "accepted": False,
+            "stage": "clip",
+            "decision": clip_result["decision"],
+            "reason_code": clip_result["reason_code"],
+            "error": f"IMAGE_VALIDATION_{clip_result['decision'].upper()}",
+            "message": clip_result["message"],
+            "details": clip_result,
+        }), 422
+
+    # Stage 3: Hybrid QCNN Classification (Only reaches here if both Gemini and CLIP passed)
+    logger.info("Both validation stages passed (Gemini & CLIP). Proceeding to Stage 3: Hybrid QCNN classification.")
 
     try:
         bundle=get_bundle()
@@ -264,6 +307,28 @@ def predict():
         "gradcam_overlay_b64":overlay,
         "gradcam_analysis":analysis,
         "interpretation":None,
+        "validation":{
+            "accepted":True,
+            "status":"passed",
+            "message":"Gambar berhasil divalidasi. Melanjutkan klasifikasi...",
+            "gemini":{
+                "decision":gemini_result["decision"],
+                "projection":gemini_result["projection"],
+                "is_grayscale":gemini_result["is_grayscale"],
+                "image_quality":gemini_result["image_quality"],
+                "scope_assessment":gemini_result["scope_assessment"],
+                "reason":gemini_result.get("reason"),
+                "duration":gemini_result.get("duration"),
+            },
+            "clip":{
+                "decision":clip_result["decision"],
+                "chest_score":clip_result["chest_score"],
+                "margin":clip_result["margin"],
+                "detected_category":clip_result["detected_category"],
+                "detected_label":clip_result.get("detected_label"),
+                "duration":clip_result.get("duration"),
+            }
+        },
         "model":{
             "name":"HQCNN",
             "backbone":"ResNet-50",
@@ -288,6 +353,73 @@ def predict():
     )
 
     return jsonify(payload),200
+
+@app.post("/api/validate-image")
+@require_approved_access
+def validate_image_endpoint():
+    """Standalone image validation endpoint executing Stage 1 (Gemini) and Stage 2 (CLIP)."""
+    if "image" not in request.files:
+        return jsonify({"error":"Field 'image' is required."}),400
+
+    file=request.files["image"]
+    if not file or not file.filename:
+        return jsonify({"error":"No file selected."}),400
+
+    suffix=Path(file.filename).suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        return jsonify({
+            "accepted":False,
+            "stage":"precheck",
+            "reason_code":"NOT_CHEST_XRAY",
+            "error":"Unsupported file type.",
+            "message":"Format gambar tidak didukung."
+        }),400
+
+    raw=file.read()
+    if not raw:
+        return jsonify({"accepted":False,"error":"Empty file."}),400
+
+    try:
+        image=pil_from_bytes(raw)
+        image.load()
+        if image.width<128 or image.height<128:
+            return jsonify({
+                "accepted":False,
+                "stage":"precheck",
+                "reason_code":"POOR_QUALITY",
+                "error":"INVALID_IMAGE_SIZE",
+                "message":"Resolusi gambar terlalu rendah. Minimal 128×128 piksel."
+            }),400
+    except Exception:
+        return jsonify({
+            "accepted":False,
+            "stage":"precheck",
+            "reason_code":"POOR_QUALITY",
+            "error":"INVALID_IMAGE",
+            "message":"Gambar tidak valid atau rusak."
+        }),400
+
+    # Stage 1: Gemini Vision
+    gemini_res=validate_image_with_gemini(image)
+    if gemini_res["decision"]=="error":
+        return jsonify(gemini_res),503
+    if gemini_res["decision"]!="pass":
+        return jsonify(gemini_res),422
+
+    # Stage 2: CLIP
+    clip_res=validate_clip(image)
+    if clip_res["decision"]=="error":
+        return jsonify(clip_res),503
+    if clip_res["decision"]!="pass":
+        return jsonify(clip_res),422
+
+    return jsonify({
+        "accepted":True,
+        "status":"passed",
+        "message":"Gambar berhasil divalidasi. Melanjutkan klasifikasi...",
+        "gemini":gemini_res,
+        "clip":clip_res
+    }),200
 
 @app.post("/api/interpret")
 @require_approved_access

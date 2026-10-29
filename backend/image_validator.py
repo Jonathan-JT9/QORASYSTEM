@@ -1,7 +1,9 @@
-"""QORA Chest X-Ray validation using CLIP zero-shot classification."""
+"""QORA Chest X-Ray validation using CLIP zero-shot classification (Stage 2)."""
+from __future__ import annotations
 
 from functools import lru_cache
 import logging
+import time
 
 import torch
 from PIL import Image
@@ -12,42 +14,54 @@ logger = logging.getLogger("qora.image_validator")
 MODEL_NAME = "openai/clip-vit-base-patch32"
 
 CATEGORIES = {
-    "chest_xray": [
-        "A frontal chest X-ray radiograph showing both lungs, ribs and heart.",
-        "A medical chest radiograph showing the lungs and rib cage.",
-        "A posterior anterior chest X-ray image.",
-        "An anterior posterior chest X-ray image.",
+    "frontal_chest_xray": [
+        "A human frontal PA chest X-ray radiograph showing both lungs and ribs.",
+        "A human frontal AP chest X-ray radiograph.",
+        "A frontal projection medical chest radiograph.",
     ],
-    "skull_xray": [
-        "A skull X-ray radiograph showing the bones of the head.",
-        "A lateral X-ray image of a human skull.",
-        "A medical radiograph showing the human head and skull.",
+    "lateral_chest_xray": [
+        "A lateral chest X-ray radiograph viewed from the side.",
+        "A side-view chest radiograph of the thorax.",
     ],
-    "brain_scan": [
-        "A CT scan image of the human brain.",
-        "An MRI scan image showing the human brain.",
-        "A cross-sectional medical image of the head.",
+    "other_body_xray": [
+        "An X-ray of another body part such as hand, knee, foot, leg, or arm.",
+        "An X-ray of the skull, head, spine, or pelvis.",
+        "A dental X-ray radiograph.",
     ],
-    "other_xray": [
-        "An X-ray image of a human hand.",
-        "An X-ray image of a human leg.",
-        "An X-ray image of the human spine.",
-        "An X-ray image of the human pelvis.",
+    "other_modality": [
+        "A CT scan cross-sectional image of the body.",
+        "An MRI scan medical image.",
+        "An ultrasound sonography medical image.",
+    ],
+    "portrait_photo": [
+        "An ordinary photograph of a person, human face, portrait, or selfie.",
+        "A photograph of a person.",
     ],
     "non_medical": [
-        "A photograph of a person's face.",
-        "A photograph of a cat or dog.",
-        "A natural landscape photograph.",
-        "A screenshot of text or a computer screen.",
+        "A nonmedical image, illustration, food, animal, plant, building, or drawing.",
+        "A screenshot, computer icon, digital logo, or document.",
     ],
 }
 
 CATEGORY_LABELS = {
-    "chest_xray": "Chest X-Ray",
-    "skull_xray": "Skull X-Ray",
-    "brain_scan": "CT Scan atau MRI kepala",
-    "other_xray": "X-Ray bagian tubuh lainnya",
+    "frontal_chest_xray": "Chest X-Ray Frontal (PA/AP)",
+    "lateral_chest_xray": "Chest X-Ray Lateral",
+    "other_body_xray": "X-Ray bagian tubuh lainnya",
+    "other_modality": "CT Scan, MRI, atau USG",
+    "portrait_photo": "Foto manusia / potret",
     "non_medical": "Gambar nonmedis",
+}
+
+VALIDATION_MESSAGES = {
+    "SUPPORTED_CHEST_XRAY": "Gambar berhasil divalidasi. Melanjutkan klasifikasi...",
+    "NOT_CHEST_XRAY": "Gambar tidak sesuai. Silakan unggah citra Chest X-Ray manusia.",
+    "LATERAL_PROJECTION": "Proyeksi citra tidak didukung. Silakan unggah Chest X-Ray tampak depan (PA/AP).",
+    "COLORIZED_XRAY": "Format tampilan citra tidak didukung. Silakan unggah citra Chest X-Ray grayscale.",
+    "POOR_QUALITY": "Kualitas citra tidak memadai. Silakan unggah gambar yang lebih jelas dan tidak terpotong.",
+    "OTHER_BODY_OR_MODALITY": "Jenis citra tidak didukung. Sistem hanya menerima Chest X-Ray.",
+    "OUT_OF_SCOPE": "Citra mungkin berada di luar cakupan klasifikasi Normal dan Tuberkulosis. Silakan gunakan citra yang sesuai dengan cakupan penelitian.",
+    "UNCERTAIN": "Sistem belum dapat memastikan kesesuaian citra. Silakan unggah citra lain yang lebih jelas.",
+    "SERVICE_ERROR": "Validasi gambar sedang tidak tersedia. Silakan coba kembali beberapa saat lagi.",
 }
 
 MIN_CHEST_SCORE = 0.45
@@ -61,13 +75,13 @@ def load_validator():
     processor = CLIPProcessor.from_pretrained(
         MODEL_NAME,
         local_files_only=True,
-        use_fast=False
+        use_fast=False,
     )
 
     model = CLIPModel.from_pretrained(
         MODEL_NAME,
         local_files_only=True,
-        use_safetensors=True
+        use_safetensors=True,
     )
 
     model.eval()
@@ -77,89 +91,123 @@ def load_validator():
     return processor, model
 
 
-def validate_chest_xray(image: Image.Image) -> dict:
-    processor, model = load_validator()
+def validate_clip(image: Image.Image) -> dict:
+    """Stage 2: Evaluate an uploaded image using local CLIP model against medical and non-medical categories."""
+    start_time = time.monotonic()
 
-    prompts = []
-    prompt_categories = []
+    try:
+        processor, model = load_validator()
 
-    for category, descriptions in CATEGORIES.items():
-        for description in descriptions:
-            prompts.append(description)
-            prompt_categories.append(category)
+        prompts = []
+        prompt_categories = []
 
-    inputs = processor(
-        text=prompts,
-        images=image.convert("RGB"),
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-    )
+        for category, descriptions in CATEGORIES.items():
+            for description in descriptions:
+                prompts.append(description)
+                prompt_categories.append(category)
 
-    with torch.inference_mode():
-        outputs = model(**inputs)
-
-        logits = outputs.logits_per_image[0]
-
-        probabilities = torch.softmax(logits, dim=0)
-
-    category_scores = {}
-
-    for category in CATEGORIES:
-        indexes = [
-            index
-            for index, name in enumerate(prompt_categories)
-            if name == category
-        ]
-
-        category_scores[category] = float(
-            probabilities[indexes].sum().item()
+        inputs = processor(
+            text=prompts,
+            images=image.convert("RGB"),
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
         )
 
-    chest_score = category_scores["chest_xray"]
+        with torch.inference_mode():
+            outputs = model(**inputs)
+            logits = outputs.logits_per_image[0]
+            probabilities = torch.softmax(logits, dim=0)
 
-    other_scores = {
-        category: score
-        for category, score in category_scores.items()
-        if category != "chest_xray"
-    }
+        category_scores = {}
+        for category in CATEGORIES:
+            indexes = [
+                index
+                for index, name in enumerate(prompt_categories)
+                if name == category
+            ]
+            category_scores[category] = float(probabilities[indexes].sum().item())
 
-    strongest_other = max(
-        other_scores,
-        key=other_scores.get
-    )
+        chest_score = category_scores["frontal_chest_xray"]
 
-    strongest_other_score = other_scores[strongest_other]
-
-    margin = chest_score - strongest_other_score
-
-    accepted = (
-        chest_score >= MIN_CHEST_SCORE
-        and margin >= MIN_MARGIN
-    )
-
-    logger.info(
-        "CXR validation: accepted=%s chest_score=%.4f margin=%.4f strongest_other=%s",
-        accepted,
-        chest_score,
-        margin,
-        strongest_other
-    )
-
-    return {
-        "accepted": accepted,
-        "chest_score": round(chest_score, 4),
-        "margin": round(margin, 4),
-        "detected_category": (
-            "chest_xray" if accepted else strongest_other
-        ),
-        "detected_label": (
-            "Chest X-Ray"
-            if accepted
-            else CATEGORY_LABELS[strongest_other]
-        ),
-        "category_scores": {
-            category: round(score, 4)
+        other_scores = {
+            category: score
             for category, score in category_scores.items()
+            if category != "frontal_chest_xray"
         }
-    }
+
+        strongest_other = max(other_scores, key=other_scores.get)
+        strongest_other_score = other_scores[strongest_other]
+        margin = chest_score - strongest_other_score
+        duration = round(time.monotonic() - start_time, 3)
+
+        # Decision logic
+        if strongest_other_score > chest_score:
+            # Another category clearly scored higher
+            if strongest_other == "lateral_chest_xray":
+                decision = "reject"
+                reason_code = "LATERAL_PROJECTION"
+            elif strongest_other in ("other_body_xray", "other_modality"):
+                decision = "reject"
+                reason_code = "OTHER_BODY_OR_MODALITY"
+            else:
+                decision = "reject"
+                reason_code = "NOT_CHEST_XRAY"
+        elif chest_score >= MIN_CHEST_SCORE and margin >= MIN_MARGIN:
+            decision = "pass"
+            reason_code = "SUPPORTED_CHEST_XRAY"
+        else:
+            # Frontal is highest but low confidence or margin
+            decision = "uncertain"
+            reason_code = "UNCERTAIN"
+
+        accepted = (decision == "pass")
+        message = VALIDATION_MESSAGES.get(reason_code, VALIDATION_MESSAGES["UNCERTAIN"])
+
+        detected_category = "frontal_chest_xray" if accepted else strongest_other
+
+        result = {
+            "accepted": accepted,
+            "stage": "clip",
+            "decision": decision,
+            "reason_code": reason_code,
+            "message": message,
+            "chest_score": round(chest_score, 4),
+            "margin": round(margin, 4),
+            "detected_category": detected_category,
+            "detected_label": CATEGORY_LABELS.get(detected_category, detected_category),
+            "category_scores": {
+                k: round(v, 4) for k, v in category_scores.items()
+            },
+            "duration": duration,
+        }
+
+        logger.info(
+            "CLIP validation completed: accepted=%s decision=%s chest_score=%.4f margin=%.4f strongest_other=%s (%.2fs)",
+            accepted,
+            decision,
+            chest_score,
+            margin,
+            strongest_other,
+            duration,
+        )
+
+        return result
+
+    except Exception as exc:
+        duration = round(time.monotonic() - start_time, 3)
+        logger.exception("CLIP validation failed due to model/runtime error: %s", exc)
+        return {
+            "accepted": False,
+            "stage": "clip",
+            "decision": "error",
+            "reason_code": "SERVICE_ERROR",
+            "message": VALIDATION_MESSAGES["SERVICE_ERROR"],
+            "error": str(exc),
+            "duration": duration,
+        }
+
+
+def validate_chest_xray(image: Image.Image) -> dict:
+    """Legacy compatibility wrapper around validate_clip."""
+    return validate_clip(image)
