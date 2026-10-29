@@ -458,7 +458,7 @@ class TestValidationPipelineIntegration(unittest.TestCase):
             "stage": "gemini",
             "decision": "reject",
             "reason_code": "NOT_CHEST_XRAY",
-            "message": "Gambar tidak sesuai. Silakan unggah citra Chest X-Ray manusia.",
+            "message": "Gambar tidak sesuai. Silakan unggah citra Chest X-Ray yang sesuai.",
             "is_chest_xray": False,
         }
 

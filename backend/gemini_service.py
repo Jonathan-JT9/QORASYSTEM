@@ -236,7 +236,7 @@ def answer_chat_query(
 
 VALIDATION_MESSAGES = {
     "SUPPORTED_CHEST_XRAY": "Gambar berhasil divalidasi. Melanjutkan klasifikasi...",
-    "NOT_CHEST_XRAY": "Gambar tidak sesuai. Silakan unggah citra Chest X-Ray manusia.",
+    "NOT_CHEST_XRAY": "Gambar tidak sesuai. Silakan unggah citra Chest X-Ray yang sesuai.",
     "LATERAL_PROJECTION": "Proyeksi citra tidak didukung. Silakan unggah Chest X-Ray tampak depan (PA/AP).",
     "COLORIZED_XRAY": "Format tampilan citra tidak didukung. Silakan unggah citra Chest X-Ray grayscale.",
     "POOR_QUALITY": "Kualitas citra tidak memadai. Silakan unggah gambar yang lebih jelas dan tidak terpotong.",

@@ -25,7 +25,7 @@ export default function ClinicalChatbot({ result }) {
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [error, setError] = useState("");
-  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const inputRef = useRef(null);
 
   // Initialize or reset chat when a new prediction result arrives
@@ -55,7 +55,12 @@ export default function ClinicalChatbot({ result }) {
   }, [result?.id]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
   }, [messages, loading]);
 
   const isTB = result?.label?.toLowerCase().includes("tuberculosis") || result?.label === "TB";
@@ -119,7 +124,7 @@ export default function ClinicalChatbot({ result }) {
       setError(errMsg);
     } finally {
       setLoading(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 100);
     }
   }
 
@@ -195,7 +200,10 @@ export default function ClinicalChatbot({ result }) {
       {!isCollapsed && (
         <>
           {/* Message Thread */}
-          <div className="flex max-h-[420px] min-h-[220px] flex-col gap-4 overflow-y-auto p-5 text-sm leading-relaxed scroll-smooth">
+          <div
+            ref={chatContainerRef}
+            className="flex min-h-0 flex-col gap-4 overflow-y-auto p-5 text-sm leading-relaxed scroll-smooth"
+          >
             {messages.map((msg, index) => {
               const isUser = msg.role === "user";
               return (
@@ -285,8 +293,6 @@ export default function ClinicalChatbot({ result }) {
                 </div>
               </div>
             )}
-
-            <div ref={messagesEndRef} />
           </div>
 
           {/* Input Box */}
