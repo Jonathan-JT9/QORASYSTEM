@@ -1,10 +1,17 @@
 import { Activity, ArrowRight, FileText, LogOut, ScanLine } from "lucide-react";
 
 const links = [
-  ["home", "Overview", "#/home"],
-  ["classification", "Analysis", "#/classification"],
+  ["home", "Home", "#/home"],
+  ["analysis", "Analysis", "#/analysis"],
   ["history", "History", "#/history"],
 ];
+
+function getUserInitial(user) {
+  const raw = (user?.name || user?.username || "Q").trim();
+  // Strip common medical title prefixes like "dr.", "dr ", "drg.", "prof.", "ners." (case-insensitive)
+  const cleaned = raw.replace(/^(drg?|prof|ners|ns)\.?\s+/i, "").trim();
+  return (cleaned.charAt(0) || raw.charAt(0) || "Q").toUpperCase();
+}
 
 export default function Header({
   health,
@@ -57,7 +64,7 @@ export default function Header({
             <span>{online ? `System online` : "System offline"}</span>
           </div>
 
-          <a href="#/classification" className="qora-header-cta">
+          <a href="#/analysis" className="qora-header-cta">
             <ScanLine size={15} />
             <span>New analysis</span>
             <ArrowRight size={14} />
@@ -66,10 +73,7 @@ export default function Header({
           {currentUser && (
             <div className="qora-user-menu">
               <div className="qora-user-avatar">
-                {(currentUser.name || currentUser.username || "Q")
-                  .trim()
-                  .charAt(0)
-                  .toUpperCase()}
+                {getUserInitial(currentUser)}
               </div>
 
               <div className="qora-user-copy">
