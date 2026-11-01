@@ -250,10 +250,30 @@ create policy "profiles_update_own"
   using (auth.uid() = id)
   with check (
     auth.uid() = id
-    -- Regular doctors cannot elevate their own role or status
+    -- Regular doctors cannot elevate their own role or status (only rejected -> pending is allowed on resubmission)
     and role = (select p.role from public.profiles p where p.id = auth.uid())
-    and status = (select p.status from public.profiles p where p.id = auth.uid())
+    and (
+      status = (select p.status from public.profiles p where p.id = auth.uid())
+      or (status = 'pending' and (select p.status from public.profiles p where p.id = auth.uid()) = 'rejected')
+    )
   );
+
+create or replace function public.resubmit_doctor_credentials()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.profiles
+  set status = 'pending',
+      rejection_reason = null,
+      updated_at = now()
+  where id = auth.uid() and status = 'rejected';
+end;
+$$;
+
+grant execute on function public.resubmit_doctor_credentials() to authenticated;
 
 drop policy if exists "profiles_update_admin" on public.profiles;
 create policy "profiles_update_admin"

@@ -34,10 +34,14 @@ def compute_gradcam(
     image: Image.Image,
     target_index: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Return Grad-CAM overlay (RGB uint8) and normalized heatmap."""
+    """Return Grad-CAM overlay (RGB uint8) and normalized heatmap aligned to original dimensions."""
     model = bundle.model
     model.eval()
-    tensor = bundle.transform(image.convert("RGB")).unsqueeze(0).to(bundle.device)
+
+    orig_image = image.convert("RGB")
+    orig_w, orig_h = orig_image.size
+
+    tensor = bundle.transform(orig_image).unsqueeze(0).to(bundle.device)
     captured: dict[str, torch.Tensor] = {}
 
     def _hook(_module, _inputs, output):
@@ -79,11 +83,11 @@ def compute_gradcam(
             cam = F.relu((weights * activations).sum(dim=1, keepdim=True))
             cam = F.interpolate(
                 cam,
-                size=tensor.shape[-2:],
+                size=(orig_h, orig_w),
                 mode="bilinear",
                 align_corners=False,
             )
-            cam_np = cam.squeeze().detach().cpu().numpy()
+            cam_np = cam[0, 0].detach().cpu().numpy()
 
     finally:
         handle.remove()
@@ -100,7 +104,7 @@ def compute_gradcam(
     else:
         heatmap = ((cam_np - cam_min) / (cam_max - cam_min)).astype(np.float32)
 
-    base = _tensor_to_display_rgb(tensor)
+    base = np.asarray(orig_image, dtype=np.float32) / 255.0
     overlay = 0.45 * _jet_colormap(heatmap) + 0.55 * base
     overlay_uint8 = (np.clip(overlay, 0, 1) * 255).astype(np.uint8)
 

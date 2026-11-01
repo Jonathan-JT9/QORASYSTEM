@@ -13,6 +13,7 @@ import CxrEducationSection from "./components/CxrEducationSection.jsx";
 import AdminDashboard from "./components/AdminDashboard.jsx";
 import RestrictedAccessDialog from "./components/RestrictedAccessDialog.jsx";
 import DoctorCredentialModal from "./components/DoctorCredentialModal.jsx";
+import AnalysisVerificationGate from "./components/AnalysisVerificationGate.jsx";
 import {
   fetchApiHistory,
   getHealth,
@@ -25,18 +26,21 @@ import {
   supabase,
   supabaseConfigured,
 } from "./services/supabase.js";
-import { getCurrentUser, signOut } from "./services/auth.js";
+import { getCurrentUser, signOut, getDoctorVerificationStatus } from "./services/auth.js";
 import {
   Activity,
   ArrowRight,
   ArrowUpRight,
   BookOpen,
   CheckCircle2,
+  Clock,
   Clock3,
   Layers,
   ScanLine,
   ShieldCheck,
+  ShieldAlert,
   Sparkles,
+  AlertTriangle,
 } from "lucide-react";
 
 function getPage() {
@@ -184,10 +188,11 @@ export default function App() {
   }, [preview]);
 
   async function handleFile(file) {
-    if (currentUser?.role === "doctor" && currentUser?.status !== "approved") {
+    if (currentUser?.role === "doctor" && !isDoctorVerified) {
       setError(
-        "Akses analisis dinonaktifkan. Kredensial medis Anda belum disetujui administrator."
+        "Akses analisis dibatasi. Dokter wajib melengkapi dokumen STR dan SIP serta diverifikasi sebelum menggunakan fitur klasifikasi."
       );
+      setCredentialModalOpen(true);
       return;
     }
 
@@ -306,9 +311,11 @@ export default function App() {
     );
   }
 
-  // 2. Role Dokter: jika status belum disetujui, aktifkan mode pembatasan (restricted)
-  const isDoctorRestricted =
-    currentUser.role === "doctor" && currentUser.status !== "approved";
+  // 2. Role Dokter: periksa verifikasi dokumen kredensial (STR & SIP)
+  const doctorVerification = getDoctorVerificationStatus(currentUser);
+  const isDoctor = doctorVerification.isDoctor;
+  const isDoctorVerified = doctorVerification.isVerified;
+  const isDoctorSuspended = isDoctor && doctorVerification.verificationState === "suspended";
 
   const tbCount = history.filter(
     (row) => (row.label || row.predicted_label) === "TB",
@@ -322,14 +329,14 @@ export default function App() {
 
   return (
     <div
-      className={`qora-app min-h-screen text-neutral-900 selection:bg-black selection:text-white ${isDoctorRestricted ? "overflow-hidden h-screen" : ""
+      className={`qora-app min-h-screen text-neutral-900 selection:bg-black selection:text-white ${isDoctorSuspended ? "overflow-hidden h-screen" : ""
         }`}
     >
-      {/* Background Clinical Workspace (Blurred & Disabled when restricted) */}
+      {/* Background Clinical Workspace (Blurred & Disabled only when suspended) */}
       <div
-        className={isDoctorRestricted ? "qora-workspace-restricted" : undefined}
-        aria-hidden={isDoctorRestricted ? true : undefined}
-        inert={isDoctorRestricted ? "" : undefined}
+        className={isDoctorSuspended ? "qora-workspace-restricted" : undefined}
+        aria-hidden={isDoctorSuspended ? true : undefined}
+        inert={isDoctorSuspended ? "" : undefined}
       >
         <Header
           health={health}
@@ -342,6 +349,75 @@ export default function App() {
         <main className="qora-main">
           {/* HOME */}
           <div hidden={page !== "home"} className="qora-home-view">
+            {/* Banner Status Verifikasi Dokter */}
+            {isDoctor && !isDoctorVerified && (
+              <div className="qora-container pt-4">
+                <div className="rounded-2xl border border-neutral-300 bg-white p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3.5">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-black text-white">
+                      {doctorVerification.verificationState === "pending" ? (
+                        <Clock size={20} />
+                      ) : doctorVerification.verificationState === "rejected" ? (
+                        <AlertTriangle size={20} />
+                      ) : (
+                        <ShieldAlert size={20} />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-bold text-neutral-900">
+                          {doctorVerification.verificationState === "pending"
+                            ? "Status Kredensial: Menunggu Verifikasi Dokumen"
+                            : doctorVerification.verificationState === "rejected"
+                            ? "Status Kredensial: Pengajuan Perlu Perbaikan"
+                            : "Verifikasi Kredensial Medis Diperlukan"}
+                        </span>
+                        <span
+                          className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                            doctorVerification.verificationState === "pending"
+                              ? "bg-amber-100 text-amber-800"
+                              : doctorVerification.verificationState === "rejected"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {doctorVerification.verificationState === "pending"
+                            ? "Menunggu Verifikasi Admin"
+                            : doctorVerification.verificationState === "rejected"
+                            ? "Ditolak Admin"
+                            : "Dokumen Belum Lengkap"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-600">
+                        {doctorVerification.verificationState === "pending"
+                          ? "Dokumen kredensial Anda telah berhasil dikirim dan sedang menunggu pemeriksaan oleh Administrator."
+                          : doctorVerification.verificationState === "rejected"
+                          ? `Catatan Administrator: ${doctorVerification.rejectionReason || "Dokumen belum memenuhi kriteria."} Silakan perbarui dan ajukan ulang.`
+                          : "Lengkapi dan unggah dokumen STR serta SIP Anda agar Administrator dapat memverifikasi akun Anda untuk akses Analisis."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setCredentialModalOpen(true)}
+                      className="flex items-center gap-1.5 rounded-xl bg-black px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800 transition"
+                    >
+                      <span>
+                        {doctorVerification.verificationState === "pending"
+                          ? "Lihat Status Pengajuan"
+                          : doctorVerification.verificationState === "rejected"
+                          ? "Perbaiki Dokumen"
+                          : "Lengkapi Dokumen"}
+                      </span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <section className="qora-hero-section">
               <div className="qora-container qora-hero-grid">
                 <div className="qora-hero-copy">
@@ -454,10 +530,18 @@ export default function App() {
             aria-label="Analysis"
             className="qora-container qora-page-content"
           >
-            <PageHeading
-              title="Chest X-Ray analysis"
-              description="Unggah citra, tinjau hasil klasifikasi, lalu evaluasi penjelasan visual dan interpretasi pendukung klinis."
-            />
+            {isDoctor && !isDoctorVerified ? (
+              <AnalysisVerificationGate
+                currentUser={currentUser}
+                onOpenCredentials={() => setCredentialModalOpen(true)}
+                onRefresh={refreshUser}
+              />
+            ) : (
+              <>
+                <PageHeading
+                  title="Chest X-Ray analysis"
+                  description="Unggah citra, tinjau hasil klasifikasi, lalu evaluasi penjelasan visual dan interpretasi pendukung klinis."
+                />
 
             <div className="qora-workflow-steps" aria-label="Alur analisis">
               <div className="qora-workflow-step is-current">
@@ -706,8 +790,10 @@ export default function App() {
                   error={error}
                 />
               </section>
-            </div>
-            {/* End classification workspace sections */}
+                </div>
+                {/* End classification workspace sections */}
+              </>
+            )}
           </div>
 
           {/* HISTORY */}
@@ -789,8 +875,8 @@ export default function App() {
         <Footer />
       </div>
 
-      {/* Foreground Restricted Access Dialog */}
-      {isDoctorRestricted && !credentialModalOpen && (
+      {/* Foreground Suspended Access Dialog (Only when account is suspended) */}
+      {isDoctorSuspended && !credentialModalOpen && (
         <RestrictedAccessDialog
           currentUser={currentUser}
           onOpenCredentials={() => setCredentialModalOpen(true)}
@@ -804,9 +890,9 @@ export default function App() {
         isOpen={credentialModalOpen}
         onClose={() => setCredentialModalOpen(false)}
         currentUser={currentUser}
+        onRefresh={refreshUser}
         onSuccess={async () => {
           await refreshUser();
-          setCredentialModalOpen(false);
         }}
       />
     </div>

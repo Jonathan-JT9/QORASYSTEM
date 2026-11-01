@@ -78,7 +78,7 @@ export default function LandingPage({ onLoginSuccess, health }) {
       if (result.needsEmailConfirmation) {
         setSuccessMsg(
           result.message ||
-            "Pendaftaran akun berhasil! Silakan periksa email Anda untuk verifikasi sebelum masuk."
+          "Pendaftaran akun berhasil! Silakan periksa email Anda untuk verifikasi sebelum masuk."
         );
         setMode("signin");
         setIdentifier(email.trim().toLowerCase());
@@ -88,7 +88,7 @@ export default function LandingPage({ onLoginSuccess, health }) {
 
       setSuccessMsg(
         result.message ||
-          "Akun dokter berhasil dibuat! Mengalihkan ke pengisian kredensial…"
+        "Akun dokter berhasil dibuat! Mengalihkan ke pengisian kredensial…"
       );
       onLoginSuccess(result);
     } catch (err) {
@@ -310,7 +310,7 @@ export default function LandingPage({ onLoginSuccess, health }) {
                 </div>
 
                 <div className="qora-field">
-                  <label htmlFor="reg-fullname">Nama Lengkap & Gelar Medis</label>
+                  <label htmlFor="reg-fullname">Nama Lengkap</label>
                   <div className="qora-input-wrap">
                     <User size={16} />
                     <input
@@ -319,7 +319,7 @@ export default function LandingPage({ onLoginSuccess, health }) {
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Contoh: dr. Siti Rahma, Sp.Rad"
+                      placeholder="Contoh: Taylor Swift"
                     />
                   </div>
                 </div>

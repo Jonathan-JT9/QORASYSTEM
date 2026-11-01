@@ -28,7 +28,16 @@ function normalizeUser(authUser, profile = null) {
     username;
 
   const role = profile?.role || meta.role || "doctor";
-  const status = profile?.status || meta.status || "pending";
+  let status = profile?.status || meta.status || "pending";
+
+  // Dokter hanya boleh berstatus 'approved' jika Admin telah meninjau pengajuan dokumennya
+  if (role !== "admin" && status === "approved" && profile) {
+    const reviewedAt = profile.reviewed_at ? new Date(profile.reviewed_at).getTime() : 0;
+    const updatedAt = profile.updated_at ? new Date(profile.updated_at).getTime() : 0;
+    if (reviewedAt === 0 || (updatedAt > 0 && updatedAt > reviewedAt)) {
+      status = "pending";
+    }
+  }
 
   return {
     id: authUser.id,
@@ -175,7 +184,7 @@ export async function signUpDoctorAccount({
   const cleanPassword = password || "";
 
   if (!cleanFullName) {
-    throw new Error("Nama lengkap beserta gelar dokter wajib diisi.");
+    throw new Error("Nama lengkap wajib diisi.");
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
@@ -270,8 +279,119 @@ export async function signUpDoctorAccount({
 }
 
 /**
+ * Memeriksa status kelengkapan dokumen dan verifikasi akun dokter.
+ *
+ * Alur status verifikasi kredensial:
+ * 1. "incomplete": Dokter belum melengkapi seluruh dokumen kredensial (STR dan SIP).
+ * 2. "pending": Dokter telah menyerahkan seluruh dokumen (STR dan SIP) dan sedang menunggu verifikasi Admin.
+ * 3. "approved": Admin telah memeriksa dan menyetujui seluruh dokumen kredensial.
+ * 4. "rejected": Admin menolak pengajuan dokumen kredensial (dengan alasan penolakan).
+ * 5. "suspended": Akun dokter ditangguhkan oleh Administrator.
+ *
+ * PENTING: Hanya status "approved" yang diizinkan mengakses fitur Analisis / Klasifikasi.
+ */
+export function getDoctorVerificationStatus(user) {
+  if (!user) {
+    return {
+      isDoctor: false,
+      isAdmin: false,
+      isVerified: false,
+      hasStr: false,
+      hasSip: false,
+      hasAllDocuments: false,
+      status: "unauthenticated",
+      verificationState: "incomplete",
+      missingDocuments: ["STR (Surat Tanda Registrasi)", "SIP (Surat Izin Praktik)"],
+      rejectionReason: null,
+    };
+  }
+
+  const role = String(user.role || user.profile?.role || "").toLowerCase().trim();
+  const isAdmin = role === "admin";
+
+  if (isAdmin) {
+    return {
+      isDoctor: false,
+      isAdmin: true,
+      isVerified: true,
+      hasStr: true,
+      hasSip: true,
+      hasAllDocuments: true,
+      status: "approved",
+      verificationState: "approved",
+      missingDocuments: [],
+      rejectionReason: null,
+    };
+  }
+
+  const profile = user.profile || {};
+  const hasStr = Boolean(
+    (profile.str_document_path && profile.str_document_path.trim()) ||
+    (profile.str_number && profile.str_number.trim())
+  );
+  const hasSip = Boolean(
+    (profile.sip_document_path && profile.sip_document_path.trim()) ||
+    (profile.sip_number && profile.sip_number.trim())
+  );
+  const hasAllDocuments = hasStr && hasSip;
+
+  const rawStatus = String(profile.status || user.status || "pending").toLowerCase().trim();
+  const rejectionReason = profile.rejection_reason || user.rejection_reason || null;
+
+  // Verifikasi persetujuan Admin:
+  // Dokter HANYA disetujui jika Admin telah memeriksa dan menyetujui pengajuan berkas ini
+  // (reviewed_at valid dan tidak mendahului pengunggahan/pembaruan dokumen terakhir)
+  const reviewedAt = profile.reviewed_at ? new Date(profile.reviewed_at).getTime() : 0;
+  const updatedAt = profile.updated_at ? new Date(profile.updated_at).getTime() : 0;
+  const isReviewedAndApprovedByAdmin = Boolean(
+    rawStatus === "approved" &&
+    reviewedAt > 0 &&
+    (updatedAt === 0 || reviewedAt >= updatedAt)
+  );
+
+  // Alur Status:
+  // - "rejected": Ditolak oleh Admin
+  // - "suspended": Ditangguhkan oleh Admin
+  // - "incomplete": Dokumen STR atau SIP belum lengkap
+  // - "approved": STR dan SIP lengkap DAN Admin telah menyetujui dokumen yang diajukan
+  // - "pending": STR dan SIP lengkap, menunggu persetujuan Admin
+  let verificationState = "incomplete";
+  if (rawStatus === "rejected") {
+    verificationState = "rejected";
+  } else if (rawStatus === "suspended") {
+    verificationState = "suspended";
+  } else if (!hasAllDocuments) {
+    verificationState = "incomplete";
+  } else if (isReviewedAndApprovedByAdmin) {
+    verificationState = "approved";
+  } else {
+    verificationState = "pending";
+  }
+
+  // ATURAN MUTLAK: Hanya status "approved" yang boleh membuka akses analisis / klasifikasi
+  const isVerified = verificationState === "approved";
+
+  const missingDocuments = [];
+  if (!hasStr) missingDocuments.push("STR (Surat Tanda Registrasi)");
+  if (!hasSip) missingDocuments.push("SIP (Surat Izin Praktik)");
+
+  return {
+    isDoctor: true,
+    isAdmin: false,
+    isVerified,
+    hasStr,
+    hasSip,
+    hasAllDocuments,
+    status: rawStatus,
+    verificationState,
+    missingDocuments,
+    rejectionReason,
+  };
+}
+
+/**
  * Tahap 2: Pengisian / Pembaruan Formulir Kredensial Dokter (STR & SIP).
- * Dipanggil dari dialog akses terbatas atau menu akun.
+ * Dipanggil dari dialog kredensial atau gate verifikasi.
  */
 export async function submitDoctorCredentials({
   specialty,
@@ -298,20 +418,11 @@ export async function submitDoctorCredentials({
   const cleanSipNumber = (sipNumber || "").trim();
   const cleanSipExpiry = sipExpiry || null;
 
-  if (!cleanSpecialty) {
-    throw new Error("Spesialisasi medis wajib diisi.");
-  }
+  const hasStrData = Boolean(cleanStrNumber || strFile);
+  const hasSipData = Boolean(cleanSipNumber || sipFile);
 
-  if (!cleanStrNumber) {
-    throw new Error("Nomor STR (Surat Tanda Registrasi) wajib diisi.");
-  }
-
-  if (!cleanStrExpiry) {
-    throw new Error("Masa berlaku STR wajib diisi.");
-  }
-
-  if (!cleanInstitution) {
-    throw new Error("Nama instansi / rumah sakit tempat praktik wajib diisi.");
+  if (!hasStrData && !hasSipData && !cleanInstitution && !cleanSpecialty) {
+    throw new Error("Mohon lengkapi data dokumen STR atau SIP.");
   }
 
   // Upload STR jika file baru dipilih
@@ -335,34 +446,70 @@ export async function submitDoctorCredentials({
   }
 
   const updatePayload = {
-    specialty: cleanSpecialty,
-    str_number: cleanStrNumber,
-    str_expiry: cleanStrExpiry,
-    institution: cleanInstitution,
-    sip_number: cleanSipNumber || null,
-    sip_expiry: cleanSipExpiry || null,
-    status: "pending",
-    rejection_reason: null,
     updated_at: new Date().toISOString(),
+    status: "pending",
+    reviewed_at: null,
+    reviewed_by: null,
+    rejection_reason: null,
   };
 
-  if (strPath) {
-    updatePayload.str_document_path = strPath;
-  }
-  if (sipPath) {
-    updatePayload.sip_document_path = sipPath;
-  }
+  if (cleanSpecialty) updatePayload.specialty = cleanSpecialty;
+  if (cleanInstitution) updatePayload.institution = cleanInstitution;
+  if (cleanStrNumber) updatePayload.str_number = cleanStrNumber;
+  if (cleanStrExpiry) updatePayload.str_expiry = cleanStrExpiry;
+  if (strPath) updatePayload.str_document_path = strPath;
+  if (cleanSipNumber) updatePayload.sip_number = cleanSipNumber;
+  if (cleanSipExpiry) updatePayload.sip_expiry = cleanSipExpiry;
+  if (sipPath) updatePayload.sip_document_path = sipPath;
 
-  const { data: updatedProfile, error: updateErr } = await supabase
-    .from("profiles")
-    .update(updatePayload)
-    .eq("id", user.id)
-    .select()
-    .single();
+  let updatedProfile = null;
+  try {
+    const { data: profileResult, error: updateErr } = await supabase
+      .from("profiles")
+      .update(updatePayload)
+      .eq("id", user.id)
+      .select()
+      .single();
 
-  if (updateErr) {
-    console.error("Gagal menyimpan dokumen kredensial:", updateErr);
-    throw new Error(`Gagal menyimpan kredensial: ${updateErr.message}`);
+    if (updateErr) throw updateErr;
+    updatedProfile = profileResult;
+  } catch (err) {
+    // Jika update status/reviewed_at ditolak oleh RLS di database
+    if (err.message?.toLowerCase().includes("row-level security")) {
+      delete updatePayload.status;
+      delete updatePayload.reviewed_at;
+      delete updatePayload.reviewed_by;
+      delete updatePayload.rejection_reason;
+
+      const { data: fallbackResult, error: fallbackErr } = await supabase
+        .from("profiles")
+        .update(updatePayload)
+        .eq("id", user.id)
+        .select()
+        .single();
+
+      if (fallbackErr) {
+        console.error("Gagal menyimpan dokumen kredensial:", fallbackErr);
+        throw new Error(`Gagal menyimpan kredensial: ${fallbackErr.message}`);
+      }
+      updatedProfile = {
+        ...fallbackResult,
+        status: "pending",
+        reviewed_at: null,
+        reviewed_by: null,
+        rejection_reason: null,
+      };
+
+      // Coba panggil RPC resubmit jika tersedia
+      try {
+        await supabase.rpc("resubmit_doctor_credentials");
+      } catch {
+        // RPC opsional jika belum diterapkan
+      }
+    } else {
+      console.error("Gagal menyimpan dokumen kredensial:", err);
+      throw new Error(`Gagal menyimpan kredensial: ${err.message}`);
+    }
   }
 
   return updatedProfile;

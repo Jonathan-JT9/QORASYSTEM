@@ -12,8 +12,13 @@ import {
   X,
   Shield,
   FileCheck,
+  Clock,
+  RefreshCw,
 } from "lucide-react";
-import { submitDoctorCredentials } from "../services/auth.js";
+import {
+  submitDoctorCredentials,
+  getDoctorVerificationStatus,
+} from "../services/auth.js";
 
 const DEFAULT_SPECIALTIES = [
   "Radiologi (Sp.Rad)",
@@ -26,10 +31,15 @@ export default function DoctorCredentialModal({
   onClose,
   currentUser,
   onSuccess,
+  onRefresh,
+  initialStep = 1,
 }) {
   const profile = currentUser?.profile || {};
+  const statusInfo = getDoctorVerificationStatus(currentUser);
+  const { verificationState, rejectionReason } = statusInfo;
 
-  const [step, setStep] = useState(1); // 1: STR, 2: Tempat Praktik & SIP, 3: Ringkasan
+  const [step, setStep] = useState(initialStep); // 1: STR, 2: Tempat Praktik & SIP, 3: Ringkasan
+  const [isEditing, setIsEditing] = useState(false);
 
   // Step 1: STR state
   const initialSpecialty = profile.specialty || "Radiologi (Sp.Rad)";
@@ -65,9 +75,64 @@ export default function DoctorCredentialModal({
   const [confirmedTruth, setConfirmedTruth] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshNotice, setRefreshNotice] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   const modalRef = useRef(null);
+
+  // Tentukan tampilan status
+  const isPendingState = verificationState === "pending";
+  const isApprovedState = verificationState === "approved";
+  const isRejectedState = verificationState === "rejected";
+
+  const showPendingView = isPendingState && !isEditing;
+  const showApprovedView = isApprovedState && !isEditing;
+  const showRejectedView = isRejectedState && !isEditing;
+  const showStatusOverview =
+    showPendingView || showApprovedView || showRejectedView;
+
+  // Sync state when modal is opened or user changes
+  useEffect(() => {
+    if (isOpen) {
+      const p = currentUser?.profile || {};
+      const spec = p.specialty || "Radiologi (Sp.Rad)";
+      const isCustom =
+        spec &&
+        spec !== "Radiologi (Sp.Rad)" &&
+        spec !== "Pulmonologi dan Kedokteran Respirasi (Sp.P)";
+      setSpecialtyChoice(isCustom ? "Lainnya" : spec);
+      setCustomSpecialty(isCustom ? spec : "");
+      setStrNumber(p.str_number || "");
+      setStrExpiry(p.str_expiry || "");
+      setExistingStrPath(p.str_document_path || "");
+      setInstitution(p.institution || "");
+      setSipNumber(p.sip_number || "");
+      setSipExpiry(p.sip_expiry || "");
+      setExistingSipPath(p.sip_document_path || "");
+      setErrorMsg("");
+      setRefreshNotice("");
+      setConfirmedTruth(false);
+
+      const vInfo = getDoctorVerificationStatus(currentUser);
+      if (vInfo.verificationState === "incomplete") {
+        setIsEditing(true);
+        if (initialStep) {
+          setStep(initialStep);
+        } else if (
+          (p.str_number || p.str_document_path) &&
+          !(p.sip_number || p.sip_document_path)
+        ) {
+          setStep(2);
+        } else {
+          setStep(1);
+        }
+      } else {
+        setIsEditing(false);
+        setStep(3);
+      }
+    }
+  }, [isOpen, currentUser, initialStep]);
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -86,13 +151,21 @@ export default function DoctorCredentialModal({
       ? customSpecialty.trim()
       : specialtyChoice;
 
+  const hasStrDocument = Boolean(
+    strNumber.trim() || strFile || existingStrPath || profile.str_document_path
+  );
+  const hasSipDocument = Boolean(
+    sipNumber.trim() || sipFile || existingSipPath || profile.sip_document_path
+  );
+
   function handleFileChange(e, type) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size limit: 10MB
     if (file.size > 10 * 1024 * 1024) {
-      setErrorMsg(`Ukuran berkas ${type.toUpperCase()} melebihi batas maksimal 10 MB.`);
+      setErrorMsg(
+        `Ukuran berkas ${type.toUpperCase()} melebihi batas maksimal 10 MB.`
+      );
       return;
     }
 
@@ -148,7 +221,16 @@ export default function DoctorCredentialModal({
     setErrorMsg("");
 
     if (!confirmedTruth) {
-      setErrorMsg("Mohon centang pernyataan keabsahan dokumen sebelum mengirim.");
+      setErrorMsg(
+        "Mohon centang pernyataan keabsahan dokumen sebelum mengirim."
+      );
+      return;
+    }
+
+    if (!hasStrDocument && !hasSipDocument) {
+      setErrorMsg(
+        "Mohon lengkapi setidaknya dokumen STR atau SIP sebelum menyimpan."
+      );
       return;
     }
 
@@ -166,6 +248,7 @@ export default function DoctorCredentialModal({
         sipFile,
       });
 
+      setIsEditing(false);
       if (onSuccess) {
         await onSuccess();
       }
@@ -173,6 +256,20 @@ export default function DoctorCredentialModal({
       setErrorMsg(err.message || "Gagal menyimpan berkas kredensial.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCheckStatus() {
+    if (!onRefresh) return;
+    setRefreshing(true);
+    setRefreshNotice("");
+    try {
+      await onRefresh();
+      setRefreshNotice("Status akun berhasil diperbarui.");
+    } catch {
+      setRefreshNotice("Gagal memeriksa status terkini.");
+    } finally {
+      setTimeout(() => setRefreshing(false), 500);
     }
   }
 
@@ -194,25 +291,58 @@ export default function DoctorCredentialModal({
               <span className="rounded border border-black bg-neutral-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">
                 Kredensial Dokter
               </span>
-              <span className="text-xs text-neutral-500 font-medium">
-                Langkah {step} dari 3
-              </span>
+              {showPendingView ? (
+                <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                  <Clock size={11} /> Menunggu Verifikasi
+                </span>
+              ) : showApprovedView ? (
+                <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                  <CheckCircle2 size={11} /> Terverifikasi
+                </span>
+              ) : showRejectedView ? (
+                <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-800">
+                  <AlertTriangle size={11} /> Perlu Perbaikan
+                </span>
+              ) : (
+                <span className="text-xs text-neutral-500 font-medium">
+                  Langkah {step} dari 3
+                </span>
+              )}
             </div>
+
             <h2
               id="credential-modal-title"
               className="text-lg font-bold text-black sm:text-xl"
             >
-              {step === 1 && "Kredensial STR Dokter"}
-              {step === 2 && "Tempat Praktik & Kredensial SIP"}
-              {step === 3 && "Ringkasan & Konfirmasi Pengajuan"}
+              {showPendingView && "Menunggu Verifikasi Dokumen"}
+              {showApprovedView && "Dokumen Kredensial Terverifikasi"}
+              {showRejectedView && "Pengajuan Kredensial Perlu Perbaikan"}
+              {!showStatusOverview && (
+                <>
+                  {step === 1 && "Kredensial STR Dokter"}
+                  {step === 2 && "Tempat Praktik & Kredensial SIP"}
+                  {step === 3 && "Ringkasan & Konfirmasi Pengajuan"}
+                </>
+              )}
             </h2>
+
             <p className="text-xs text-neutral-600">
-              {step === 1 &&
-                "Lengkapi spesialisasi medis dan data Surat Tanda Registrasi (STR) aktif."}
-              {step === 2 &&
-                "Lengkapi informasi instansi rumah sakit dan Surat Izin Praktik (jika ada)."}
-              {step === 3 &&
-                "Tinjau kembali berkas dan informasi sebelum dikirimkan ke Administrator."}
+              {showPendingView &&
+                "Dokumen kredensial Anda telah berhasil dikirim dan sedang menunggu pemeriksaan oleh Administrator."}
+              {showApprovedView &&
+                "Kredensial medis Anda telah disetujui oleh Administrator. Anda memiliki akses penuh ke fitur Analisis & Klasifikasi."}
+              {showRejectedView &&
+                "Pengajuan dokumen kredensial Anda belum dapat disetujui oleh Administrator. Silakan periksa catatan dan perbaiki dokumen."}
+              {!showStatusOverview && (
+                <>
+                  {step === 1 &&
+                    "Lengkapi spesialisasi medis dan data Surat Tanda Registrasi (STR) aktif."}
+                  {step === 2 &&
+                    "Lengkapi informasi instansi rumah sakit dan Surat Izin Praktik (jika ada)."}
+                  {step === 3 &&
+                    "Tinjau kembali berkas dan informasi sebelum dikirimkan ke Administrator."}
+                </>
+              )}
             </p>
           </div>
 
@@ -231,17 +361,17 @@ export default function DoctorCredentialModal({
         <div className="grid grid-cols-3 gap-2">
           <div
             className={`h-1.5 rounded-full transition-all ${
-              step >= 1 ? "bg-black" : "bg-neutral-200"
+              showStatusOverview || step >= 1 ? "bg-black" : "bg-neutral-200"
             }`}
           />
           <div
             className={`h-1.5 rounded-full transition-all ${
-              step >= 2 ? "bg-black" : "bg-neutral-200"
+              showStatusOverview || step >= 2 ? "bg-black" : "bg-neutral-200"
             }`}
           />
           <div
             className={`h-1.5 rounded-full transition-all ${
-              step >= 3 ? "bg-black" : "bg-neutral-200"
+              showStatusOverview || step >= 3 ? "bg-black" : "bg-neutral-200"
             }`}
           />
         </div>
@@ -257,8 +387,203 @@ export default function DoctorCredentialModal({
           </div>
         )}
 
+        {/* VIEW 1: STATUS REVIEW OVERVIEW (PENDING / APPROVED / REJECTED) */}
+        {showStatusOverview && (
+          <div className="space-y-4">
+            {/* Status Indicator Banner */}
+            {showPendingView && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 space-y-1.5">
+                <div className="flex items-center gap-2 font-bold text-amber-950 text-xs">
+                  <Clock size={16} className="text-amber-700" />
+                  <span>Status Pengajuan: Menunggu Verifikasi Administrator</span>
+                </div>
+                <p className="text-xs text-amber-900 leading-relaxed">
+                  Dokumen kredensial Anda telah berhasil dikirim dan sedang dalam antrean pemeriksaan oleh Administrator. Akses ke modul <strong>Analisis &amp; Klasifikasi</strong> akan otomatis terbuka setelah dokumen Anda disetujui.
+                </p>
+              </div>
+            )}
+
+            {showApprovedView && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-1.5">
+                <div className="flex items-center gap-2 font-bold text-emerald-950 text-xs">
+                  <CheckCircle2 size={16} className="text-emerald-700" />
+                  <span>Status Pengajuan: Terverifikasi (Disetujui)</span>
+                </div>
+                <p className="text-xs text-emerald-900 leading-relaxed">
+                  Administrator telah menyetujui seluruh dokumen kredensial medis Anda. Akun Anda memiliki akses penuh ke fitur klasifikasi radiograf toraks, visualisasi Grad-CAM, dan interpretasi pendukung klinis.
+                </p>
+              </div>
+            )}
+
+            {showRejectedView && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-1.5">
+                <div className="flex items-center gap-2 font-bold text-red-950 text-xs">
+                  <AlertTriangle size={16} className="text-red-700 flex-shrink-0" />
+                  <span>Catatan Penolakan dari Administrator:</span>
+                </div>
+                <p className="text-xs text-red-900 leading-relaxed font-medium pl-6">
+                  {rejectionReason ||
+                    "Dokumen STR/SIP tidak terbaca atau masa berlaku telah kedaluwarsa. Silakan periksa kembali berkas dan lakukan perbaikan."}
+                </p>
+              </div>
+            )}
+
+            {/* Ringkasan Data Dokumen Kredensial */}
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-700 border-b border-neutral-200 pb-2">
+                <FileCheck size={15} />
+                <span>Ringkasan Pengajuan Dokumen Kredensial</span>
+              </div>
+
+              <div className="grid gap-2.5 text-xs sm:grid-cols-2">
+                <div>
+                  <span className="text-neutral-500">Nama Dokter:</span>
+                  <p className="font-semibold text-neutral-900 mt-0.5">
+                    {profile.full_name || currentUser?.name || currentUser?.username}
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-neutral-500">Spesialisasi Medis:</span>
+                  <p className="font-semibold text-neutral-900 mt-0.5">
+                    {profile.specialty || resolvedSpecialty || "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-neutral-500">Instansi Tempat Praktik:</span>
+                  <p className="font-semibold text-neutral-900 mt-0.5">
+                    {profile.institution || institution || "-"}
+                  </p>
+                </div>
+
+                <div className="sm:col-span-2 border-t border-neutral-200 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Status STR */}
+                  <div className="rounded-lg border border-neutral-200 bg-white p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-neutral-900">1. Dokumen STR</span>
+                      {hasStrDocument ? (
+                        <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                          <CheckCircle2 size={11} /> Lengkap
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                          <AlertTriangle size={11} /> Belum Ada
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-mono text-neutral-700">
+                      Nomor: {strNumber || profile.str_number || "-"}
+                    </p>
+                    <p className="text-[11px] text-neutral-600">
+                      Masa Berlaku: {strExpiry || profile.str_expiry || "-"}
+                    </p>
+                    <p className="text-[11px] text-neutral-600 truncate">
+                      Berkas:{" "}
+                      {strFile
+                        ? strFile.name
+                        : existingStrPath || profile.str_document_path
+                        ? "Dokumen terlampir"
+                        : "Belum diunggah"}
+                    </p>
+                  </div>
+
+                  {/* Status SIP */}
+                  <div className="rounded-lg border border-neutral-200 bg-white p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-neutral-900">2. Dokumen SIP</span>
+                      {hasSipDocument ? (
+                        <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                          <CheckCircle2 size={11} /> Lengkap
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                          <AlertTriangle size={11} /> Belum Ada
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-mono text-neutral-700">
+                      Nomor: {sipNumber || profile.sip_number || "-"}
+                    </p>
+                    <p className="text-[11px] text-neutral-600">
+                      Masa Berlaku: {sipExpiry || profile.sip_expiry || "-"}
+                    </p>
+                    <p className="text-[11px] text-neutral-600 truncate">
+                      Berkas:{" "}
+                      {sipFile
+                        ? sipFile.name
+                        : existingSipPath || profile.sip_document_path
+                        ? "Dokumen terlampir"
+                        : "Belum diunggah"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {refreshNotice && (
+              <div className="rounded-lg border border-neutral-300 bg-neutral-50 p-2 text-xs text-neutral-700">
+                {refreshNotice}
+              </div>
+            )}
+
+            {/* Action Controls for Status Overview */}
+            <div className="flex items-center justify-between pt-3 border-t border-neutral-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition"
+              >
+                Tutup
+              </button>
+
+              <div className="flex items-center gap-2">
+                {showPendingView && (
+                  <button
+                    type="button"
+                    onClick={handleCheckStatus}
+                    disabled={refreshing}
+                    className="flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-200 transition disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      size={13}
+                      className={refreshing ? "animate-spin" : ""}
+                    />
+                    <span>{refreshing ? "Memeriksa…" : "Periksa Status"}</span>
+                  </button>
+                )}
+
+                {showApprovedView && (
+                  <a
+                    href="#/analysis"
+                    onClick={onClose}
+                    className="flex items-center gap-1.5 rounded-xl bg-black px-5 py-2 text-xs font-bold text-white hover:bg-neutral-800 transition"
+                  >
+                    <span>Buka Analisis</span>
+                    <ArrowRight size={14} />
+                  </a>
+                )}
+
+                {showRejectedView && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(true);
+                      setStep(1);
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl bg-black px-5 py-2 text-xs font-bold text-white hover:bg-neutral-800 transition"
+                  >
+                    <span>Perbaiki Dokumen</span>
+                    <ArrowRight size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* STEP 1: KREDENSIAL STR */}
-        {step === 1 && (
+        {!showStatusOverview && step === 1 && (
           <form onSubmit={handleNextStep1} className="space-y-4">
             {/* Spesialisasi */}
             <div className="qora-field">
@@ -345,7 +670,7 @@ export default function DoctorCredentialModal({
             {/* Unggah Berkas STR */}
             <div className="qora-field">
               <label>
-                Unggah Berkas STR (Wajib)
+                Unggah Berkas STR (Wajib PDF / Foto STR Asli)
               </label>
               <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50/80 p-4 hover:bg-neutral-100/70 transition">
                 <label
@@ -361,8 +686,8 @@ export default function DoctorCredentialModal({
                         {strFile
                           ? strFile.name
                           : existingStrPath
-                          ? "Dokumen STR sudah ada (Klik untuk mengganti)"
-                          : "Pilih file STR dokter"}
+                          ? "Dokumen STR sudah terlampir (Klik untuk mengganti)"
+                          : "Pilih file STR dokter (PDF / Gambar)"}
                       </strong>
                       <span className="text-[11px] text-neutral-500">
                         {strFile
@@ -393,14 +718,14 @@ export default function DoctorCredentialModal({
                 onClick={onClose}
                 className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition"
               >
-                Batal
+                Nanti Saja
               </button>
 
               <button
                 type="submit"
                 className="flex items-center gap-1.5 rounded-xl bg-black px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800 transition"
               >
-                <span>Lanjut ke Tempat Praktik</span>
+                <span>Lanjut ke Tempat Praktik &amp; SIP</span>
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -408,7 +733,7 @@ export default function DoctorCredentialModal({
         )}
 
         {/* STEP 2: TEMPAT PRAKTIK & SIP */}
-        {step === 2 && (
+        {!showStatusOverview && step === 2 && (
           <form onSubmit={handleNextStep2} className="space-y-4">
             {/* Instansi / Rumah Sakit */}
             <div className="qora-field">
@@ -423,16 +748,16 @@ export default function DoctorCredentialModal({
                   required
                   value={institution}
                   onChange={(e) => setInstitution(e.target.value)}
-                  placeholder="Contoh: RS Paru Dr. M. Goenawan / RSUP Persahabatan"
+                  placeholder="Contoh: RSUP Prof. Dr. R. D. Kandou Manado"
                 />
               </div>
             </div>
 
-            {/* Nomor SIP & Masa Berlaku (Opsional) */}
+            {/* Nomor SIP & Masa Berlaku SIP */}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="qora-field">
                 <label htmlFor="modal-sip-num">
-                  Nomor SIP (Opsional)
+                  Nomor SIP (Wajib untuk Akses Analisis)
                 </label>
                 <div className="qora-input-wrap">
                   <FileText size={16} />
@@ -448,7 +773,7 @@ export default function DoctorCredentialModal({
 
               <div className="qora-field">
                 <label htmlFor="modal-sip-exp">
-                  Masa Berlaku SIP (Opsional)
+                  Masa Berlaku SIP (Wajib untuk Akses Analisis)
                 </label>
                 <div className="qora-input-wrap">
                   <Calendar size={16} />
@@ -462,10 +787,10 @@ export default function DoctorCredentialModal({
               </div>
             </div>
 
-            {/* Unggah Berkas SIP (Opsional) */}
+            {/* Unggah Berkas SIP */}
             <div className="qora-field">
               <label>
-                Unggah Berkas SIP (Opsional)
+                Unggah Berkas SIP (Wajib untuk Akses Analisis)
               </label>
               <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50/80 p-4 hover:bg-neutral-100/70 transition">
                 <label
@@ -481,8 +806,8 @@ export default function DoctorCredentialModal({
                         {sipFile
                           ? sipFile.name
                           : existingSipPath
-                          ? "Dokumen SIP sudah ada"
-                          : "Pilih file SIP jika tersedia (Opsional)"}
+                          ? "Dokumen SIP sudah terlampir (Klik untuk mengganti)"
+                          : "Pilih file SIP dokter (PDF / Gambar)"}
                       </strong>
                       <span className="text-[11px] text-neutral-500">
                         {sipFile
@@ -507,29 +832,39 @@ export default function DoctorCredentialModal({
             </div>
 
             {/* Navigation */}
-            <div className="flex items-center justify-between pt-3 border-t border-neutral-200">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-neutral-200">
               <button
                 type="button"
                 onClick={() => setStep(1)}
                 className="flex items-center gap-1.5 rounded-xl border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition"
               >
                 <ArrowLeft size={14} />
-                <span>Kembali</span>
+                <span>Kembali ke STR</span>
               </button>
 
-              <button
-                type="submit"
-                className="flex items-center gap-1.5 rounded-xl bg-black px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800 transition"
-              >
-                <span>Tinjau Ringkasan</span>
-                <ArrowRight size={14} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  className="rounded-xl border border-neutral-300 px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition"
+                  title="Simpan data saat ini meskipun dokumen belum lengkap"
+                >
+                  Simpan Progres
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 rounded-xl bg-black px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800 transition"
+                >
+                  <span>Tinjau Ringkasan</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
             </div>
           </form>
         )}
 
-        {/* STEP 3: RINGKASAN & KONFIRMASI */}
-        {step === 3 && (
+        {/* STEP 3: RINGKASAN & KONFIRMASI (SUBMISSION FORM) */}
+        {!showStatusOverview && step === 3 && (
           <form onSubmit={handleSubmitFinal} className="space-y-4">
             <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-700 border-b border-neutral-200 pb-2">
@@ -548,54 +883,96 @@ export default function DoctorCredentialModal({
                 <div>
                   <span className="text-neutral-500">Spesialisasi Medis:</span>
                   <p className="font-semibold text-neutral-900 mt-0.5">
-                    {resolvedSpecialty}
+                    {resolvedSpecialty || "-"}
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-neutral-500">Nomor STR:</span>
-                  <p className="font-mono font-semibold text-neutral-900 mt-0.5">
-                    {strNumber}
-                  </p>
-                </div>
-
-                <div>
-                  <span className="text-neutral-500">Masa Berlaku STR:</span>
+                  <span className="text-neutral-500">Instansi Tempat Praktik:</span>
                   <p className="font-semibold text-neutral-900 mt-0.5">
-                    {strExpiry}
+                    {institution || "-"}
                   </p>
                 </div>
 
-                <div>
-                  <span className="text-neutral-500">Berkas STR:</span>
-                  <p className="font-medium text-emerald-800 mt-0.5 flex items-center gap-1">
-                    <CheckCircle2 size={13} />
-                    {strFile ? strFile.name : "Dokumen STR terlampir"}
-                  </p>
-                </div>
+                <div className="sm:col-span-2 border-t border-neutral-200 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Status STR */}
+                  <div className="rounded-lg border border-neutral-200 bg-white p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-neutral-900">1. Dokumen STR</span>
+                      {hasStrDocument ? (
+                        <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                          <CheckCircle2 size={11} /> Lengkap
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                          <AlertTriangle size={11} /> Belum Ada
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-mono text-neutral-700">
+                      Nomor: {strNumber || "-"}
+                    </p>
+                    <p className="text-[11px] text-neutral-600">
+                      Masa Berlaku: {strExpiry || "-"}
+                    </p>
+                    <p className="text-[11px] text-neutral-600 truncate">
+                      Berkas:{" "}
+                      {strFile
+                        ? strFile.name
+                        : existingStrPath
+                        ? "Dokumen terlampir"
+                        : "Belum diunggah"}
+                    </p>
+                  </div>
 
-                <div>
-                  <span className="text-neutral-500">Instansi / Rumah Sakit:</span>
-                  <p className="font-semibold text-neutral-900 mt-0.5">
-                    {institution}
-                  </p>
-                </div>
-
-                <div>
-                  <span className="text-neutral-500">Nomor SIP:</span>
-                  <p className="font-mono text-neutral-900 mt-0.5">
-                    {sipNumber || "Belum disertakan"}
-                  </p>
-                </div>
-
-                <div>
-                  <span className="text-neutral-500">Berkas SIP:</span>
-                  <p className="text-neutral-700 mt-0.5">
-                    {sipFile ? sipFile.name : existingSipPath ? "Dokumen SIP terlampir" : "Tidak ada"}
-                  </p>
+                  {/* Status SIP */}
+                  <div className="rounded-lg border border-neutral-200 bg-white p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-neutral-900">2. Dokumen SIP</span>
+                      {hasSipDocument ? (
+                        <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                          <CheckCircle2 size={11} /> Lengkap
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                          <AlertTriangle size={11} /> Belum Ada
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-mono text-neutral-700">
+                      Nomor: {sipNumber || "-"}
+                    </p>
+                    <p className="text-[11px] text-neutral-600">
+                      Masa Berlaku: {sipExpiry || "-"}
+                    </p>
+                    <p className="text-[11px] text-neutral-600 truncate">
+                      Berkas:{" "}
+                      {sipFile
+                        ? sipFile.name
+                        : existingSipPath
+                        ? "Dokumen terlampir"
+                        : "Belum diunggah"}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Warning if either document is missing */}
+            {(!hasStrDocument || !hasSipDocument) && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900 space-y-1">
+                <div className="font-semibold flex items-center gap-1.5 text-amber-950">
+                  <AlertTriangle size={14} className="text-amber-700" />
+                  <span>Perhatian: Dokumen Kredensial Belum Lengkap</span>
+                </div>
+                <p>
+                  Anda tetap dapat menyimpan berkas yang ada sekarang. Namun, modul{" "}
+                  <strong>Analisis &amp; Klasifikasi</strong> akan tetap{" "}
+                  <strong>terkunci</strong> hingga kedua dokumen (STR dan SIP)
+                  dilengkapi dan disetujui Administrator.
+                </p>
+              </div>
+            )}
 
             {/* Checkbox Keabsahan Data */}
             <label className="flex items-start gap-2.5 rounded-xl border border-neutral-300 p-3 text-xs text-neutral-700 cursor-pointer hover:bg-neutral-50 transition">
@@ -608,8 +985,8 @@ export default function DoctorCredentialModal({
               />
               <span>
                 Saya menyatakan dengan sungguh-sungguh bahwa data kredensial medis
-                dan berkas STR yang saya unggah adalah sah, aktif, dan sesuai dengan
-                ketentuan Konsil Kedokteran Indonesia (KKI).
+                dan berkas dokumen yang saya serahkan adalah sah, aktif, dan sesuai
+                dengan ketentuan hukum dan profesi kedokteran yang berlaku.
               </span>
             </label>
 

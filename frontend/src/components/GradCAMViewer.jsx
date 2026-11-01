@@ -25,7 +25,7 @@ export default function GradCAMViewer({ originalUrl, overlayUrl, error }) {
     );
   }
 
-  const imageClass = "h-full w-full object-contain";
+  const imageClass = "h-full w-full object-contain object-center";
 
   return (
     <div className="space-y-5 rounded-2xl border border-neutral-300 bg-white p-6 shadow-sm">
@@ -87,7 +87,7 @@ export default function GradCAMViewer({ originalUrl, overlayUrl, error }) {
           {originalUrl && (
             <figure className="overflow-hidden rounded-xl border border-neutral-300 bg-black">
 
-              <div className="relative aspect-square w-full overflow-hidden bg-black">
+              <div className="relative aspect-square w-full overflow-hidden bg-black flex items-center justify-center">
                 <img
                   src={originalUrl}
                   alt="Citra Chest X-Ray asli"
@@ -107,7 +107,7 @@ export default function GradCAMViewer({ originalUrl, overlayUrl, error }) {
           {overlayUrl && (
             <figure className="overflow-hidden rounded-xl border border-neutral-300 bg-black">
 
-              <div className="relative aspect-square w-full overflow-hidden bg-black">
+              <div className="relative aspect-square w-full overflow-hidden bg-black flex items-center justify-center">
                 <img
                   src={overlayUrl}
                   alt="Visualisasi Grad-CAM"
@@ -156,20 +156,20 @@ export default function GradCAMViewer({ originalUrl, overlayUrl, error }) {
 
           </div>
 
-          <div className="relative mx-auto aspect-square w-full max-w-[500px] overflow-hidden rounded-xl border border-neutral-300 bg-black">
+          <div className="relative mx-auto aspect-square w-full max-w-[500px] overflow-hidden rounded-xl border border-neutral-300 bg-black flex items-center justify-center">
 
             {/* Original Image */}
             <img
               src={originalUrl}
               alt="Chest X-Ray asli"
-              className="absolute inset-0 h-full w-full object-contain"
+              className="absolute inset-0 h-full w-full object-contain object-center"
             />
 
             {/* Grad-CAM Overlay */}
             <img
               src={overlayUrl}
               alt="Grad-CAM overlay"
-              className="absolute inset-0 h-full w-full object-contain transition-opacity duration-150"
+              className="absolute inset-0 h-full w-full object-contain object-center transition-opacity duration-150"
               style={{
                 opacity: opacity / 100,
               }}

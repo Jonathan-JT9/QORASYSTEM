@@ -85,7 +85,7 @@ export default function Header({
                 </span>
               </div>
 
-              {currentUser.role === "doctor" && onOpenCredentials && (
+              {currentUser.role !== "admin" && onOpenCredentials && (
                 <button
                   type="button"
                   onClick={onOpenCredentials}

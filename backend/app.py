@@ -83,30 +83,48 @@ def get_authenticated_user(req)->tuple[dict|None,str|None,int]:
         user_id=user_data.get("id")
 
         prof_res=requests.get(
-            f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=role,status,username,full_name",
+            f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=role,status,username,full_name,str_number,str_document_path,sip_number,sip_document_path,reviewed_at,updated_at",
             headers={"Authorization":f"Bearer {token}","apikey":SUPABASE_ANON_KEY},
             timeout=5
         )
 
         role="doctor"
         status="pending"
+        has_str=False
+        has_sip=False
         if prof_res.status_code==200 and prof_res.json():
             prof=prof_res.json()[0]
             role=prof.get("role","doctor")
             status=prof.get("status","pending")
+            has_str=bool((prof.get("str_document_path") or "").strip() or (prof.get("str_number") or "").strip())
+            has_sip=bool((prof.get("sip_document_path") or "").strip() or (prof.get("sip_number") or "").strip())
+            reviewed_at=prof.get("reviewed_at")
+            updated_at=prof.get("updated_at")
+            if role != "admin" and status == "approved":
+                if not reviewed_at or (updated_at and updated_at > reviewed_at):
+                    status = "pending"
         else:
             meta=user_data.get("user_metadata",{})
             role=meta.get("role","doctor")
             status=meta.get("status","pending")
+            has_str=bool((meta.get("str_document_path") or "").strip() or (meta.get("str_number") or "").strip())
+            has_sip=bool((meta.get("sip_document_path") or "").strip() or (meta.get("sip_number") or "").strip())
+            reviewed_at=meta.get("reviewed_at")
+            updated_at=meta.get("updated_at")
+            if role != "admin" and status == "approved":
+                if not reviewed_at or (updated_at and updated_at > reviewed_at):
+                    status = "pending"
 
         user_info={
             "id":user_id,
             "email":user_data.get("email"),
             "role":role,
-            "status":status
+            "status":status,
+            "has_str":has_str,
+            "has_sip":has_sip
         }
 
-        _AUTH_CACHE[token]=(user_info,now+60)
+        _AUTH_CACHE[token]=(user_info,now+10)
         return user_info,None,200
 
     except Exception as exc:
@@ -122,6 +140,23 @@ def require_approved_access(f):
 
         if user.get("role")=="admin":
             return f(*args,**kwargs)
+
+        # Doctor Account Verification Gate: both STR and SIP must be submitted
+        has_str = bool(user.get("has_str", False))
+        has_sip = bool(user.get("has_sip", False))
+
+        if not (has_str and has_sip):
+            missing = []
+            if not has_str:
+                missing.append("STR (Surat Tanda Registrasi)")
+            if not has_sip:
+                missing.append("SIP (Surat Izin Praktik)")
+            missing_text = " dan ".join(missing)
+            return jsonify({
+                "error": "DOCUMENTS_INCOMPLETE",
+                "message": f"Akses analisis ditolak. Dokumen {missing_text} belum dilengkapi. Silakan lengkapi dan unggah seluruh dokumen kredensial medis yang dipersyaratkan.",
+                "missing_documents": missing
+            }), 403
 
         if user.get("status")!="approved":
             status_text={

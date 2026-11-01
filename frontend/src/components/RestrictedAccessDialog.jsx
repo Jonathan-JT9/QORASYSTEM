@@ -21,6 +21,7 @@ export default function RestrictedAccessDialog({
   onOpenCredentials,
   onRefresh,
   onLogout,
+  onClose,
 }) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState("");
@@ -29,18 +30,18 @@ export default function RestrictedAccessDialog({
   const status = currentUser?.status || "pending";
   const profile = currentUser?.profile || {};
 
-  // Check if documents have been submitted:
-  // If status is pending and no STR document or STR number is recorded, doctor hasn't submitted yet.
-  const hasSubmittedDocuments = Boolean(
-    profile.str_document_path || profile.str_number
-  );
+  const hasStr = Boolean(profile.str_document_path || (profile.str_number && profile.str_number.trim()));
+  const hasSip = Boolean(profile.sip_document_path || (profile.sip_number && profile.sip_number.trim()));
+  const hasSubmittedDocuments = hasStr && hasSip;
 
   let stateType = "incomplete";
   if (status === "rejected") {
     stateType = "rejected";
   } else if (status === "suspended") {
     stateType = "suspended";
-  } else if (status === "pending" && hasSubmittedDocuments) {
+  } else if (!hasSubmittedDocuments) {
+    stateType = "incomplete";
+  } else if (status === "pending") {
     stateType = "pending_review";
   } else {
     stateType = "incomplete";
@@ -215,8 +216,8 @@ export default function RestrictedAccessDialog({
             <p>
               Akun Anda telah berhasil dibuat. Sesuai regulasi standar keselamatan
               klinis di <strong>QORA</strong>, Anda wajib melengkapi data Surat
-              Tanda Registrasi (STR) aktif dan informasi tempat praktik sebelum
-              dapat mengakses modul klasifikasi radiograf toraks HQCNN dan fitur klinis lainnya.
+              Tanda Registrasi (STR) aktif dan Surat Izin Praktik (SIP) sebelum
+              dapat mengakses modul klasifikasi radiograf toraks HQCNN dan fitur analisis lainnya.
             </p>
           )}
 
@@ -224,7 +225,7 @@ export default function RestrictedAccessDialog({
             <p>
               Dokumen kredensial Anda telah diterima dan sedang dalam tahap
               pemeriksaan keabsahan oleh Administrator rumah sakit / sistem. Selama
-              proses peninjauan berlangsung, akses ruang kerja klinis dibatasi
+              proses peninjauan berlangsung, akses modul klasifikasi dibatasi
               sementara demi keamanan data medis.
             </p>
           )}
@@ -246,43 +247,58 @@ export default function RestrictedAccessDialog({
           )}
         </div>
 
-        {/* Context / Details Box */}
-        {stateType === "pending_review" && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-2.5 text-xs text-neutral-800">
-            <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
-              <span className="font-semibold text-amber-950 flex items-center gap-1.5">
-                <FileCheck2 size={14} className="text-amber-700" />
-                Data Pengajuan
+        {/* Checklist Box for Incomplete or Pending Review */}
+        {(stateType === "incomplete" || stateType === "pending_review") && (
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-4 space-y-3 text-xs text-neutral-800">
+            <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
+              <span className="font-semibold text-neutral-900 flex items-center gap-1.5">
+                <FileCheck2 size={14} className="text-neutral-700" />
+                Status Kelengkapan Dokumen Wajib
               </span>
-              <span className="text-[11px] font-mono text-amber-900">
-                Diajukan: {formatDateTime(submissionDate)}
-              </span>
+              {submissionDate && (
+                <span className="text-[11px] font-mono text-neutral-500">
+                  Pembaruan: {formatDateTime(submissionDate)}
+                </span>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-neutral-700">
-              <div>
-                <span className="text-neutral-500 block text-[11px]">Spesialisasi:</span>
-                <span className="font-semibold text-neutral-900">
-                  {profile.specialty || "Belum ditentukan"}
-                </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {/* STR Checklist */}
+              <div className="rounded-lg border border-neutral-200 bg-white p-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-neutral-900">1. Dokumen STR</span>
+                  {hasStr ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                      <CheckCircle2 size={11} /> Lengkap
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                      <AlertTriangle size={11} /> Belum Ada
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-neutral-600">
+                  Nomor: {profile.str_number || "-"}
+                </div>
               </div>
-              <div>
-                <span className="text-neutral-500 block text-[11px]">Nomor STR:</span>
-                <span className="font-mono font-semibold text-neutral-900">
-                  {profile.str_number || "-"}
-                </span>
-              </div>
-              <div>
-                <span className="text-neutral-500 block text-[11px]">Instansi Praktik:</span>
-                <span className="font-semibold text-neutral-900">
-                  {profile.institution || "-"}
-                </span>
-              </div>
-              <div>
-                <span className="text-neutral-500 block text-[11px]">Status Berkas STR:</span>
-                <span className="text-emerald-700 font-semibold inline-flex items-center gap-1">
-                  <CheckCircle2 size={12} /> Berkas Terunggah
-                </span>
+
+              {/* SIP Checklist */}
+              <div className="rounded-lg border border-neutral-200 bg-white p-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-neutral-900">2. Dokumen SIP</span>
+                  {hasSip ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                      <CheckCircle2 size={11} /> Lengkap
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                      <AlertTriangle size={11} /> Belum Ada
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-neutral-600">
+                  Nomor: {profile.sip_number || "-"}
+                </div>
               </div>
             </div>
           </div>
@@ -308,14 +324,26 @@ export default function RestrictedAccessDialog({
 
         {/* Action Buttons */}
         <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-neutral-200">
-          <button
-            type="button"
-            onClick={onLogout}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-neutral-300 px-4 py-2.5 text-xs font-semibold text-neutral-700 hover:border-black hover:text-black transition"
-          >
-            <LogOut size={14} />
-            <span>Keluar dari Sesi</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-neutral-300 px-3.5 py-2.5 text-xs font-semibold text-neutral-700 hover:border-black hover:text-black transition"
+            >
+              <LogOut size={14} />
+              <span>Keluar</span>
+            </button>
+
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-neutral-300 px-3.5 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition"
+              >
+                <span>Ke Beranda</span>
+              </button>
+            )}
+          </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2.5">
             {/* If pending or rejected or suspended: option to refresh status */}

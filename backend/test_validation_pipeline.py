@@ -372,7 +372,7 @@ class TestValidationPipelineIntegration(unittest.TestCase):
     ):
         from app import app
 
-        mock_auth.return_value = ({"id": "doc-1", "role": "doctor", "status": "approved"}, None, 200)
+        mock_auth.return_value = ({"id": "doc-1", "role": "doctor", "status": "approved", "has_str": True, "has_sip": True}, None, 200)
 
         # Gemini passes
         mock_gemini.return_value = {
@@ -450,7 +450,7 @@ class TestValidationPipelineIntegration(unittest.TestCase):
     ):
         from app import app
 
-        mock_auth.return_value = ({"id": "doc-1", "role": "doctor", "status": "approved"}, None, 200)
+        mock_auth.return_value = ({"id": "doc-1", "role": "doctor", "status": "approved", "has_str": True, "has_sip": True}, None, 200)
 
         # Gemini rejects because it's a selfie / photo
         mock_gemini.return_value = {
@@ -495,7 +495,7 @@ class TestValidationPipelineIntegration(unittest.TestCase):
     ):
         from app import app
 
-        mock_auth.return_value = ({"id": "doc-1", "role": "doctor", "status": "approved"}, None, 200)
+        mock_auth.return_value = ({"id": "doc-1", "role": "doctor", "status": "approved", "has_str": True, "has_sip": True}, None, 200)
 
         # Gemini passed
         mock_gemini.return_value = {
@@ -549,7 +549,7 @@ class TestValidationPipelineIntegration(unittest.TestCase):
     ):
         from app import app
 
-        mock_auth.return_value = ({"id": "doc-1", "role": "doctor", "status": "approved"}, None, 200)
+        mock_auth.return_value = ({"id": "doc-1", "role": "doctor", "status": "approved", "has_str": True, "has_sip": True}, None, 200)
 
         # Gemini returns service error
         mock_gemini.return_value = {
@@ -582,6 +582,215 @@ class TestValidationPipelineIntegration(unittest.TestCase):
         # QCNN and CLIP must not be run
         mock_clip.assert_not_called()
         mock_predict.assert_not_called()
+
+
+class TestDoctorAccountVerificationGate(unittest.TestCase):
+    """Tests for Doctor Account Verification Gate at /api/predict and /api/interpret."""
+
+    def setUp(self):
+        from app import app
+        self.app = app
+        self.client = app.test_client()
+
+    def _make_dummy_request(self, token="mock-token"):
+        img = make_dummy_image()
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return self.client.post(
+            "/api/predict",
+            data={"image": (buf, "test.png")},
+            content_type="multipart/form-data",
+            headers={"Authorization": f"Bearer {token}"} if token else {},
+        )
+
+    @patch("app.get_authenticated_user")
+    def test_unauthenticated_request_returns_401(self, mock_auth):
+        mock_auth.return_value = (None, "Otentikasi diperlukan.", 401)
+        res = self._make_dummy_request(token=None)
+        self.assertEqual(res.status_code, 401)
+        data = res.get_json()
+        self.assertEqual(data["error"], "UNAUTHORIZED")
+
+    @patch("app.get_authenticated_user")
+    def test_newly_registered_doctor_no_str_no_sip_returns_403_incomplete(self, mock_auth):
+        # Scenario 1 & 2 & 4: New doctor without STR and SIP
+        mock_auth.return_value = (
+            {"id": "doc-new", "role": "doctor", "status": "pending", "has_str": False, "has_sip": False},
+            None,
+            200,
+        )
+        res = self._make_dummy_request()
+        self.assertEqual(res.status_code, 403)
+        data = res.get_json()
+        self.assertEqual(data["error"], "DOCUMENTS_INCOMPLETE")
+        self.assertIn("STR (Surat Tanda Registrasi)", data["missing_documents"])
+        self.assertIn("SIP (Surat Izin Praktik)", data["missing_documents"])
+
+    @patch("app.get_authenticated_user")
+    def test_doctor_with_only_str_returns_403_incomplete(self, mock_auth):
+        # Scenario 5: Doctor submits only STR, SIP is missing
+        mock_auth.return_value = (
+            {"id": "doc-str-only", "role": "doctor", "status": "pending", "has_str": True, "has_sip": False},
+            None,
+            200,
+        )
+        res = self._make_dummy_request()
+        self.assertEqual(res.status_code, 403)
+        data = res.get_json()
+        self.assertEqual(data["error"], "DOCUMENTS_INCOMPLETE")
+        self.assertNotIn("STR (Surat Tanda Registrasi)", data["missing_documents"])
+        self.assertIn("SIP (Surat Izin Praktik)", data["missing_documents"])
+
+    @patch("app.get_authenticated_user")
+    def test_doctor_with_only_sip_returns_403_incomplete(self, mock_auth):
+        # Scenario 6: Doctor submits only SIP, STR is missing
+        mock_auth.return_value = (
+            {"id": "doc-sip-only", "role": "doctor", "status": "pending", "has_str": False, "has_sip": True},
+            None,
+            200,
+        )
+        res = self._make_dummy_request()
+        self.assertEqual(res.status_code, 403)
+        data = res.get_json()
+        self.assertEqual(data["error"], "DOCUMENTS_INCOMPLETE")
+        self.assertIn("STR (Surat Tanda Registrasi)", data["missing_documents"])
+        self.assertNotIn("SIP (Surat Izin Praktik)", data["missing_documents"])
+
+    @patch("app.get_authenticated_user")
+    def test_doctor_with_both_docs_but_status_pending_returns_403_not_approved(self, mock_auth):
+        # Both documents submitted, but pending admin review
+        mock_auth.return_value = (
+            {"id": "doc-pending", "role": "doctor", "status": "pending", "has_str": True, "has_sip": True},
+            None,
+            200,
+        )
+        res = self._make_dummy_request()
+        self.assertEqual(res.status_code, 403)
+        data = res.get_json()
+        self.assertEqual(data["error"], "ACCOUNT_NOT_APPROVED")
+
+    @patch("app.get_authenticated_user")
+    def test_doctor_with_both_docs_but_status_rejected_returns_403_not_approved(self, mock_auth):
+        # Both documents submitted, but rejected by admin
+        mock_auth.return_value = (
+            {"id": "doc-rejected", "role": "doctor", "status": "rejected", "has_str": True, "has_sip": True},
+            None,
+            200,
+        )
+        res = self._make_dummy_request()
+        self.assertEqual(res.status_code, 403)
+        data = res.get_json()
+        self.assertEqual(data["error"], "ACCOUNT_NOT_APPROVED")
+
+    @patch("app.get_authenticated_user")
+    def test_doctor_with_both_docs_but_status_suspended_returns_403_not_approved(self, mock_auth):
+        # Both documents submitted, but suspended by admin
+        mock_auth.return_value = (
+            {"id": "doc-suspended", "role": "doctor", "status": "suspended", "has_str": True, "has_sip": True},
+            None,
+            200,
+        )
+        res = self._make_dummy_request()
+        self.assertEqual(res.status_code, 403)
+        data = res.get_json()
+        self.assertEqual(data["error"], "ACCOUNT_NOT_APPROVED")
+
+    @patch("app.predict_image")
+    @patch("app.generate_gradcam_result")
+    @patch("app.get_bundle")
+    @patch("app.validate_clip")
+    @patch("app.validate_image_with_gemini")
+    @patch("app.get_authenticated_user")
+    def test_doctor_with_both_docs_and_approved_allows_access(
+        self, mock_auth, mock_gemini, mock_clip, mock_bundle, mock_gradcam, mock_predict
+    ):
+        # Scenario 7 & 8: Verified doctor with both docs and approved status
+        mock_auth.return_value = (
+            {"id": "doc-verified", "role": "doctor", "status": "approved", "has_str": True, "has_sip": True},
+            None,
+            200,
+        )
+        mock_gemini.return_value = {
+            "accepted": True,
+            "stage": "gemini",
+            "decision": "pass",
+            "reason_code": "SUPPORTED_CHEST_XRAY",
+            "message": "Gambar berhasil divalidasi.",
+            "is_chest_xray": True,
+            "body_part": "chest",
+            "projection": "PA",
+            "is_grayscale": True,
+            "image_quality": "acceptable",
+            "scope_assessment": "in_scope",
+        }
+        mock_clip.return_value = {
+            "accepted": True,
+            "stage": "clip",
+            "decision": "pass",
+            "reason_code": "SUPPORTED_CHEST_XRAY",
+            "message": "Gambar berhasil divalidasi.",
+            "chest_score": 0.85,
+            "margin": 0.70,
+            "detected_category": "frontal_chest_xray",
+        }
+        mock_predict.return_value = {"label": "Normal", "confidence": 0.95, "probabilities": {"Normal": 0.95, "TB": 0.05}, "class_index": 0}
+        mock_gradcam.return_value = ("data:image/png;base64,dummy", {"summary": "normal"})
+        mock_b = MagicMock()
+        mock_b.model.n_qubits = 6
+        mock_b.threshold = 0.5
+        mock_bundle.return_value = mock_b
+
+        res = self._make_dummy_request()
+        self.assertEqual(res.status_code, 200)
+
+    @patch("app.predict_image")
+    @patch("app.generate_gradcam_result")
+    @patch("app.get_bundle")
+    @patch("app.validate_clip")
+    @patch("app.validate_image_with_gemini")
+    @patch("app.get_authenticated_user")
+    def test_admin_role_allows_access_without_doctor_docs(
+        self, mock_auth, mock_gemini, mock_clip, mock_bundle, mock_gradcam, mock_predict
+    ):
+        # Scenario 9: Admin access unchanged
+        mock_auth.return_value = (
+            {"id": "admin-1", "role": "admin", "status": "approved", "has_str": False, "has_sip": False},
+            None,
+            200,
+        )
+        mock_gemini.return_value = {
+            "accepted": True,
+            "stage": "gemini",
+            "decision": "pass",
+            "reason_code": "SUPPORTED_CHEST_XRAY",
+            "message": "Gambar berhasil divalidasi.",
+            "is_chest_xray": True,
+            "body_part": "chest",
+            "projection": "PA",
+            "is_grayscale": True,
+            "image_quality": "acceptable",
+            "scope_assessment": "in_scope",
+        }
+        mock_clip.return_value = {
+            "accepted": True,
+            "stage": "clip",
+            "decision": "pass",
+            "reason_code": "SUPPORTED_CHEST_XRAY",
+            "message": "Gambar berhasil divalidasi.",
+            "chest_score": 0.85,
+            "margin": 0.70,
+            "detected_category": "frontal_chest_xray",
+        }
+        mock_predict.return_value = {"label": "Normal", "confidence": 0.95, "probabilities": {"Normal": 0.95, "TB": 0.05}, "class_index": 0}
+        mock_gradcam.return_value = ("data:image/png;base64,dummy", {"summary": "normal"})
+        mock_b = MagicMock()
+        mock_b.model.n_qubits = 6
+        mock_b.threshold = 0.5
+        mock_bundle.return_value = mock_b
+
+        res = self._make_dummy_request()
+        self.assertEqual(res.status_code, 200)
 
 
 if __name__ == "__main__":

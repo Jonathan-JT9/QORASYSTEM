@@ -975,6 +975,31 @@ export default function AdminDashboard({ currentUser, onLogout }) {
                     </button>
                   )}
                 </div>
+
+                <div className="sm:col-span-2 flex items-center justify-between gap-2 pt-1 font-mono text-[11px] text-neutral-600 border-t border-dashed border-neutral-200">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <FileText size={13} className="text-neutral-500 flex-shrink-0" />
+                    <span>
+                      SIP: <strong>{approvingDoctor.sip_number || "-"}</strong>
+                    </span>
+                    {approvingDoctor.sip_expiry && (
+                      <span className="text-neutral-400">
+                        (Exp: {approvingDoctor.sip_expiry})
+                      </span>
+                    )}
+                  </div>
+
+                  {approvingDoctor.sip_document_path && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDocument(approvingDoctor.sip_document_path)}
+                      className="inline-flex items-center gap-1 rounded bg-white px-2 py-0.5 text-[11px] font-semibold text-neutral-800 border border-neutral-300 hover:border-black transition flex-shrink-0"
+                    >
+                      <ExternalLink size={10} />
+                      <span>Berkas SIP</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
