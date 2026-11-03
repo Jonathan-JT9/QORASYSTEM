@@ -422,11 +422,6 @@ export default function LandingPage({ onLoginSuccess, health }) {
               </form>
             )}
           </div>
-
-          <div className="qora-auth-security">
-            <ShieldCheck size={14} />
-            <span>Secure Role-Based Access Control · QORA RBAC</span>
-          </div>
         </section>
       </main>
 

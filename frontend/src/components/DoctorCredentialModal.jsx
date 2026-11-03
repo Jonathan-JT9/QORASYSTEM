@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import {
   submitDoctorCredentials,
+  saveDoctorProgress,
   getDoctorVerificationStatus,
 } from "../services/auth.js";
 
@@ -75,6 +76,8 @@ export default function DoctorCredentialModal({
   const [confirmedTruth, setConfirmedTruth] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [savingProgress, setSavingProgress] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [refreshNotice, setRefreshNotice] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -111,6 +114,7 @@ export default function DoctorCredentialModal({
       setSipExpiry(p.sip_expiry || "");
       setExistingSipPath(p.sip_document_path || "");
       setErrorMsg("");
+      setSaveSuccessMsg("");
       setRefreshNotice("");
       setConfirmedTruth(false);
 
@@ -214,6 +218,44 @@ export default function DoctorCredentialModal({
     }
 
     setStep(3);
+  }
+
+  async function handleSaveProgress() {
+    setErrorMsg("");
+    setSaveSuccessMsg("");
+    setSavingProgress(true);
+
+    try {
+      const updatedProfile = await saveDoctorProgress({
+        specialty: resolvedSpecialty,
+        strNumber,
+        strExpiry,
+        strFile,
+        institution,
+        sipNumber,
+        sipExpiry,
+        sipFile,
+      });
+
+      if (updatedProfile?.str_document_path) {
+        setExistingStrPath(updatedProfile.str_document_path);
+        setStrFile(null);
+      }
+      if (updatedProfile?.sip_document_path) {
+        setExistingSipPath(updatedProfile.sip_document_path);
+        setSipFile(null);
+      }
+
+      setSaveSuccessMsg("Progres kredensial berhasil disimpan ke database.");
+      if (onSuccess) {
+        await onSuccess();
+      }
+    } catch (err) {
+      console.error("Gagal menyimpan progres:", err);
+      setErrorMsg(err.message || "Gagal menyimpan progres kredensial.");
+    } finally {
+      setSavingProgress(false);
+    }
   }
 
   async function handleSubmitFinal(e) {
@@ -360,19 +402,16 @@ export default function DoctorCredentialModal({
         {/* Step Progress Bar */}
         <div className="grid grid-cols-3 gap-2">
           <div
-            className={`h-1.5 rounded-full transition-all ${
-              showStatusOverview || step >= 1 ? "bg-black" : "bg-neutral-200"
-            }`}
+            className={`h-1.5 rounded-full transition-all ${showStatusOverview || step >= 1 ? "bg-black" : "bg-neutral-200"
+              }`}
           />
           <div
-            className={`h-1.5 rounded-full transition-all ${
-              showStatusOverview || step >= 2 ? "bg-black" : "bg-neutral-200"
-            }`}
+            className={`h-1.5 rounded-full transition-all ${showStatusOverview || step >= 2 ? "bg-black" : "bg-neutral-200"
+              }`}
           />
           <div
-            className={`h-1.5 rounded-full transition-all ${
-              showStatusOverview || step >= 3 ? "bg-black" : "bg-neutral-200"
-            }`}
+            className={`h-1.5 rounded-full transition-all ${showStatusOverview || step >= 3 ? "bg-black" : "bg-neutral-200"
+              }`}
           />
         </div>
 
@@ -384,6 +423,17 @@ export default function DoctorCredentialModal({
           >
             <AlertTriangle size={15} className="flex-shrink-0" />
             <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Success Alert for Progress Saved */}
+        {saveSuccessMsg && (
+          <div
+            role="status"
+            className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-xs font-medium text-emerald-800"
+          >
+            <CheckCircle2 size={15} className="flex-shrink-0 text-emerald-600" />
+            <span>{saveSuccessMsg}</span>
           </div>
         )}
 
@@ -483,8 +533,8 @@ export default function DoctorCredentialModal({
                       {strFile
                         ? strFile.name
                         : existingStrPath || profile.str_document_path
-                        ? "Dokumen terlampir"
-                        : "Belum diunggah"}
+                          ? "Dokumen terlampir"
+                          : "Belum diunggah"}
                     </p>
                   </div>
 
@@ -513,8 +563,8 @@ export default function DoctorCredentialModal({
                       {sipFile
                         ? sipFile.name
                         : existingSipPath || profile.sip_document_path
-                        ? "Dokumen terlampir"
-                        : "Belum diunggah"}
+                          ? "Dokumen terlampir"
+                          : "Belum diunggah"}
                     </p>
                   </div>
                 </div>
@@ -686,8 +736,8 @@ export default function DoctorCredentialModal({
                         {strFile
                           ? strFile.name
                           : existingStrPath
-                          ? "Dokumen STR sudah terlampir (Klik untuk mengganti)"
-                          : "Pilih file STR dokter (PDF / Gambar)"}
+                            ? "Dokumen STR sudah terlampir (Klik untuk mengganti)"
+                            : "Pilih file STR dokter (PDF / Gambar)"}
                       </strong>
                       <span className="text-[11px] text-neutral-500">
                         {strFile
@@ -806,8 +856,8 @@ export default function DoctorCredentialModal({
                         {sipFile
                           ? sipFile.name
                           : existingSipPath
-                          ? "Dokumen SIP sudah terlampir (Klik untuk mengganti)"
-                          : "Pilih file SIP dokter (PDF / Gambar)"}
+                            ? "Dokumen SIP sudah terlampir (Klik untuk mengganti)"
+                            : "Pilih file SIP dokter (PDF / Gambar)"}
                       </strong>
                       <span className="text-[11px] text-neutral-500">
                         {sipFile
@@ -841,24 +891,6 @@ export default function DoctorCredentialModal({
                 <ArrowLeft size={14} />
                 <span>Kembali ke STR</span>
               </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStep(3)}
-                  className="rounded-xl border border-neutral-300 px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition"
-                  title="Simpan data saat ini meskipun dokumen belum lengkap"
-                >
-                  Simpan Progres
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-1.5 rounded-xl bg-black px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800 transition"
-                >
-                  <span>Tinjau Ringkasan</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
             </div>
           </form>
         )}
@@ -920,8 +952,8 @@ export default function DoctorCredentialModal({
                       {strFile
                         ? strFile.name
                         : existingStrPath
-                        ? "Dokumen terlampir"
-                        : "Belum diunggah"}
+                          ? "Dokumen terlampir"
+                          : "Belum diunggah"}
                     </p>
                   </div>
 
@@ -950,8 +982,8 @@ export default function DoctorCredentialModal({
                       {sipFile
                         ? sipFile.name
                         : existingSipPath
-                        ? "Dokumen terlampir"
-                        : "Belum diunggah"}
+                          ? "Dokumen terlampir"
+                          : "Belum diunggah"}
                     </p>
                   </div>
                 </div>

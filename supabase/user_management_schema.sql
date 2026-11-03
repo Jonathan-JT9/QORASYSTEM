@@ -58,7 +58,7 @@ create table if not exists public.admin_audit_logs (
   id uuid primary key default gen_random_uuid(),
   admin_id uuid not null references auth.users (id) on delete cascade,
   target_user_id uuid not null references auth.users (id) on delete cascade,
-  action text not null check (action in ('approve', 'reject', 'suspend', 'reinstate')),
+  action text not null check (action in ('approve', 'reject', 'suspend', 'reinstate', 'delete')),
   rejection_reason text,
   created_at timestamptz not null default now()
 );
@@ -275,6 +275,58 @@ $$;
 
 grant execute on function public.resubmit_doctor_credentials() to authenticated;
 
+-- RPC: DELETE DOCTOR USER (CASCADE FROM AUTH.USERS AND PROFILES)
+create or replace function public.delete_doctor_user(target_user_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_is_admin boolean;
+  v_target_role text;
+  v_target_email text;
+  v_target_name text;
+begin
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin' and status = 'approved'
+  ) into v_is_admin;
+
+  if not v_is_admin then
+    raise exception 'Akses ditolak: Hanya Administrator yang diizinkan menghapus data dokter.';
+  end if;
+
+  select role, email, coalesce(full_name, username)
+  into v_target_role, v_target_email, v_target_name
+  from public.profiles
+  where id = target_user_id;
+
+  if v_target_role = 'admin' then
+    raise exception 'Tidak dapat menghapus akun Administrator.';
+  end if;
+
+  update public.exam_history
+  set user_id = null
+  where user_id = target_user_id;
+
+  delete from public.admin_audit_logs
+  where target_user_id = target_user_id;
+
+  delete from auth.users where id = target_user_id;
+  delete from public.profiles where id = target_user_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'deleted_user_id', target_user_id,
+    'email', v_target_email,
+    'name', v_target_name
+  );
+end;
+$$;
+
+grant execute on function public.delete_doctor_user(uuid) to authenticated;
+
 drop policy if exists "profiles_update_admin" on public.profiles;
 create policy "profiles_update_admin"
   on public.profiles
@@ -282,6 +334,13 @@ create policy "profiles_update_admin"
   to authenticated
   using (public.is_admin())
   with check (public.is_admin());
+
+drop policy if exists "profiles_delete_admin" on public.profiles;
+create policy "profiles_delete_admin"
+  on public.profiles
+  for delete
+  to authenticated
+  using (public.is_admin());
 
 -- ADMIN AUDIT LOGS RLS
 alter table public.admin_audit_logs enable row level security;

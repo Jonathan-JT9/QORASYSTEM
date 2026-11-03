@@ -19,6 +19,7 @@ import {
   Filter,
   X,
   Shield,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "../services/supabase.js";
 import { getDocumentSignedUrl } from "../services/auth.js";
@@ -44,6 +45,9 @@ export default function AdminDashboard({ currentUser, onLogout }) {
   // Suspend modal state
   const [suspendingDoctor, setSuspendingDoctor] = useState(null);
 
+  // Delete modal state
+  const [deletingDoctor, setDeletingDoctor] = useState(null);
+
   const [actionLoading, setActionLoading] = useState(false);
 
   // Close modals on Escape key
@@ -53,6 +57,7 @@ export default function AdminDashboard({ currentUser, onLogout }) {
         setApprovingDoctor(null);
         setRejectingDoctor(null);
         setSuspendingDoctor(null);
+        setDeletingDoctor(null);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -220,6 +225,64 @@ export default function AdminDashboard({ currentUser, onLogout }) {
 
   function openSuspendModal(doctor) {
     setSuspendingDoctor(doctor);
+  }
+
+  function openDeleteModal(doctor) {
+    setDeletingDoctor(doctor);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deletingDoctor) return;
+    const doctor = deletingDoctor;
+
+    setActionLoading(true);
+    setError("");
+    setSuccessMsg("");
+
+    try {
+      // 1. Bersihkan file berkas STR/SIP dari storage bucket jika ada
+      const filesToRemove = [];
+      if (doctor.str_document_path) filesToRemove.push(doctor.str_document_path);
+      if (doctor.sip_document_path) filesToRemove.push(doctor.sip_document_path);
+      if (filesToRemove.length > 0) {
+        try {
+          await supabase.storage.from("doctor-documents").remove(filesToRemove);
+        } catch (storageErr) {
+          console.warn("Gagal menghapus file storage dokumen:", storageErr);
+        }
+      }
+
+      // 2. Panggil RPC delete_doctor_user (menghapus akun dari auth.users dan tabel profiles)
+      const { data: rpcData, error: rpcErr } = await supabase.rpc(
+        "delete_doctor_user",
+        { target_user_id: doctor.id }
+      );
+
+      if (rpcErr) {
+        console.error("Gagal mengeksekusi RPC delete_doctor_user:", rpcErr);
+        throw new Error(
+          `Gagal menghapus user dari Supabase Auth: ${rpcErr.message} (Detail: ${rpcErr.details || rpcErr.hint || "Pastikan script delete_doctor_feature.sql terbaru telah di-run di Supabase SQL Editor"}).`
+        );
+      }
+
+      // Update state lokal seketika agar list langsung bersih
+      setProfiles((prev) => prev.filter((p) => p.id !== doctor.id));
+      setDeletingDoctor(null);
+      setSuccessMsg(
+        `Akun dan data dokter ${doctor.full_name || doctor.username} berhasil dihapus permanen dari Supabase.`
+      );
+
+      // Sinkronkan ulang dari server
+      await fetchAdminData();
+    } catch (err) {
+      console.error("Gagal menghapus akun dokter:", err);
+      setError(
+        err.message ||
+          "Gagal menghapus dokter dari Supabase. Pastikan script SQL delete_doctor_user sudah dijalankan di Supabase SQL Editor."
+      );
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   async function handleConfirmSuspend() {
@@ -797,6 +860,16 @@ export default function AdminDashboard({ currentUser, onLogout }) {
                                   <span>Pulihkan & Setujui</span>
                                 </button>
                               )}
+
+                              <button
+                                type="button"
+                                disabled={actionLoading}
+                                onClick={() => openDeleteModal(doc)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:border-red-400 hover:bg-red-50 hover:text-red-700 transition disabled:opacity-50"
+                              >
+                                <Trash2 size={13} />
+                                <span>Hapus</span>
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1187,6 +1260,71 @@ export default function AdminDashboard({ currentUser, onLogout }) {
                 className="flex items-center gap-1.5 rounded-xl bg-neutral-900 px-4 py-2 text-xs font-bold text-white hover:bg-black transition disabled:opacity-50"
               >
                 {actionLoading ? "Memproses…" : "Konfirmasi Tangguhkan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingDoctor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-md animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-modal-title"
+        >
+          <div className="relative w-full max-w-lg rounded-2xl border border-red-200 bg-white p-6 sm:p-7 shadow-2xl space-y-4 text-neutral-900">
+            <div className="flex items-start justify-between border-b border-neutral-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600">
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 id="delete-modal-title" className="font-bold text-base text-black">
+                    Hapus Data Dokter
+                  </h3>
+                  <span className="text-[11px] text-neutral-500 font-mono">
+                    @{deletingDoctor.username}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeletingDoctor(null)}
+                disabled={actionLoading}
+                className="text-neutral-400 hover:text-black transition p-1"
+                aria-label="Tutup"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-700 leading-relaxed">
+              <strong>⚠ Tindakan ini tidak dapat dibatalkan.</strong> Seluruh data dokter{" "}
+              <strong>{deletingDoctor.full_name || deletingDoctor.username}</strong> akan
+              dihapus permanen dari database Supabase, termasuk profil dan riwayat
+              kredensial.
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-neutral-200">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => setDeletingDoctor(null)}
+                className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition disabled:opacity-50"
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={handleConfirmDelete}
+                className="flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition disabled:opacity-50"
+              >
+                <Trash2 size={13} />
+                {actionLoading ? "Menghapus…" : "Hapus Permanen"}
               </button>
             </div>
           </div>

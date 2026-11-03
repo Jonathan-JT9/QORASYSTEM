@@ -516,6 +516,83 @@ export async function submitDoctorCredentials({
 }
 
 /**
+ * Simpan Progres (Draf) Kredensial Dokter ke Supabase tanpa harus menyelesaikan Step 3.
+ * Menyimpan data yang telah diisi (spesialisasi, STR, instansi, SIP) dan mengunggah berkas jika ada.
+ */
+export async function saveDoctorProgress({
+  specialty,
+  strNumber,
+  strExpiry,
+  strFile,
+  institution,
+  sipNumber,
+  sipExpiry,
+  sipFile,
+}) {
+  ensureSupabaseConfigured();
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
+  if (!user) {
+    throw new Error("Sesi login telah berakhir. Silakan masuk kembali.");
+  }
+
+  const cleanSpecialty = (specialty || "").trim();
+  const cleanStrNumber = (strNumber || "").trim();
+  const cleanStrExpiry = strExpiry || null;
+  const cleanInstitution = (institution || "").trim();
+  const cleanSipNumber = (sipNumber || "").trim();
+  const cleanSipExpiry = sipExpiry || null;
+
+  // Upload STR jika file baru dipilih
+  let strPath = null;
+  if (strFile) {
+    strPath = await uploadDoctorDocument({
+      file: strFile,
+      type: "str",
+      userId: user.id,
+    });
+  }
+
+  // Upload SIP jika file baru dipilih
+  let sipPath = null;
+  if (sipFile) {
+    sipPath = await uploadDoctorDocument({
+      file: sipFile,
+      type: "sip",
+      userId: user.id,
+    });
+  }
+
+  const updatePayload = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (cleanSpecialty) updatePayload.specialty = cleanSpecialty;
+  if (cleanInstitution) updatePayload.institution = cleanInstitution;
+  if (cleanStrNumber) updatePayload.str_number = cleanStrNumber;
+  if (cleanStrExpiry) updatePayload.str_expiry = cleanStrExpiry;
+  if (strPath) updatePayload.str_document_path = strPath;
+  if (cleanSipNumber) updatePayload.sip_number = cleanSipNumber;
+  if (cleanSipExpiry) updatePayload.sip_expiry = cleanSipExpiry;
+  if (sipPath) updatePayload.sip_document_path = sipPath;
+
+  const { data: profileResult, error: updateErr } = await supabase
+    .from("profiles")
+    .update(updatePayload)
+    .eq("id", user.id)
+    .select()
+    .single();
+
+  if (updateErr) {
+    console.error("Gagal menyimpan progres kredensial:", updateErr);
+    throw new Error(`Gagal menyimpan progres: ${updateErr.message}`);
+  }
+
+  return profileResult;
+}
+
+/**
  * Unggah dokumen STR / SIP ke private bucket `doctor-documents`.
  */
 export async function uploadDoctorDocument({ file, type, userId }) {
