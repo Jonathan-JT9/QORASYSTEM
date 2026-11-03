@@ -278,7 +278,7 @@ export default function AdminDashboard({ currentUser, onLogout }) {
       console.error("Gagal menghapus akun dokter:", err);
       setError(
         err.message ||
-          "Gagal menghapus dokter dari Supabase. Pastikan script SQL delete_doctor_user sudah dijalankan di Supabase SQL Editor."
+        "Gagal menghapus dokter dari Supabase. Pastikan script SQL delete_doctor_user sudah dijalankan di Supabase SQL Editor."
       );
     } finally {
       setActionLoading(false);
@@ -597,18 +597,6 @@ export default function AdminDashboard({ currentUser, onLogout }) {
               >
                 Semua Dokter ({doctorProfiles.length})
               </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("audit")}
-                className={`flex items-center gap-1 rounded-lg px-3.5 py-2 transition-all ${activeTab === "audit"
-                  ? "bg-black text-white shadow-sm"
-                  : "bg-neutral-100 text-neutral-600 hover:text-black"
-                  }`}
-              >
-                <History size={13} />
-                <span>Log Audit ({auditLogs.length})</span>
-              </button>
             </div>
 
             {/* Search Input */}
@@ -880,69 +868,6 @@ export default function AdminDashboard({ currentUser, onLogout }) {
               )}
             </div>
           )}
-
-          {/* Tab Content: Audit Logs */}
-          {activeTab === "audit" && (
-            <div className="overflow-hidden rounded-2xl border border-neutral-300 bg-white shadow-sm">
-              <div className="border-b border-neutral-200 bg-neutral-50/70 p-4">
-                <h3 className="text-sm font-bold text-black flex items-center gap-2">
-                  <History size={16} />
-                  <span>Jejak Riwayat Aksi Administrator</span>
-                </h3>
-                <p className="mt-0.5 text-xs text-neutral-500">
-                  Setiap persetujuan, penolakan, atau penangguhan akun dicatat
-                  secara permanen dalam log audit sistem.
-                </p>
-              </div>
-
-              {auditLogs.length === 0 ? (
-                <div className="p-10 text-center text-xs text-neutral-400">
-                  Belum ada catatan aktivitas admin.
-                </div>
-              ) : (
-                <div className="divide-y divide-neutral-200 text-xs">
-                  {auditLogs.map((log) => {
-                    return (
-                      <div
-                        key={log.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-2 hover:bg-neutral-50/60"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${log.action === "approve"
-                                ? "bg-emerald-100 text-emerald-900"
-                                : log.action === "reject"
-                                  ? "bg-red-100 text-red-900"
-                                  : log.action === "reinstate"
-                                    ? "bg-blue-100 text-blue-900"
-                                    : "bg-neutral-200 text-neutral-800"
-                                }`}
-                            >
-                              {log.action}
-                            </span>
-                            <span className="font-mono text-neutral-500">
-                              Target Dokter ID: {log.target_user_id?.substring(0, 8)}…
-                            </span>
-                          </div>
-
-                          {log.rejection_reason && (
-                            <p className="text-neutral-700">
-                              <strong>Alasan:</strong> {log.rejection_reason}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="text-[11px] text-neutral-400 font-mono flex-shrink-0">
-                          {new Date(log.created_at).toLocaleString("id-ID")}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </main>
 
@@ -970,7 +895,7 @@ export default function AdminDashboard({ currentUser, onLogout }) {
                     className="text-lg font-bold tracking-tight text-black sm:text-xl mt-0.5"
                   >
                     {approvingDoctor.status === "rejected" ||
-                    approvingDoctor.status === "suspended"
+                      approvingDoctor.status === "suspended"
                       ? "Pulihkan & Setujui Akun Dokter"
                       : "Setujui Registrasi Dokter"}
                   </h3>
