@@ -36,6 +36,7 @@ import {
   Clock,
   Clock3,
   Layers,
+  LogOut,
   ScanLine,
   ShieldCheck,
   ShieldAlert,
@@ -91,6 +92,74 @@ function StatCard({ icon: Icon, label, value, detail }) {
   );
 }
 
+function LogoutConfirmationDialog({ onCancel, onConfirm, loggingOut }) {
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    dialogRef.current?.focus();
+    function handleKeyDown(event) {
+      if (event.key === "Escape" && !loggingOut) onCancel();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [loggingOut, onCancel]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-fadeIn"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !loggingOut) onCancel();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-dialog-title"
+        aria-describedby="logout-dialog-description"
+        tabIndex={-1}
+        className="w-full max-w-md rounded-3xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8"
+      >
+        <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl border border-neutral-200 bg-neutral-50 text-neutral-800">
+          <LogOut size={20} />
+        </div>
+        <h2
+          id="logout-dialog-title"
+          className="text-xl font-bold tracking-tight text-neutral-900"
+        >
+          Konfirmasi Logout
+        </h2>
+        <p
+          id="logout-dialog-description"
+          className="mt-2 text-sm leading-relaxed text-neutral-600"
+        >
+          Apakah Anda yakin ingin keluar dari akun?
+        </p>
+        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loggingOut}
+            className="qora-button qora-button-light disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loggingOut}
+            className="qora-button qora-button-dark disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <LogOut size={15} />
+            {loggingOut ? "Sedang logout..." : "Ya, Logout"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
@@ -105,6 +174,8 @@ export default function App() {
   const [preview, setPreview] = useState("");
   const [history, setHistory] = useState([]);
   const [credentialModalOpen, setCredentialModalOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const replacementFileInput = useRef(null);
   const requestId = useRef(0);
 
@@ -119,9 +190,19 @@ export default function App() {
     }
   }, []);
 
-  const handleLogout = useCallback(async () => {
-    await signOut();
-    setCurrentUser(null);
+  const handleLogout = useCallback(() => {
+    setLogoutConfirmOpen(true);
+  }, []);
+
+  const confirmLogout = useCallback(async () => {
+    setLoggingOut(true);
+    try {
+      await signOut();
+      setCurrentUser(null);
+      setLogoutConfirmOpen(false);
+    } finally {
+      setLoggingOut(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -304,10 +385,16 @@ export default function App() {
   // 1. Role Administrator: akses langsung ke Admin Dashboard
   if (currentUser.role === "admin") {
     return (
-      <AdminDashboard
-        currentUser={currentUser}
-        onLogout={handleLogout}
-      />
+      <>
+        <AdminDashboard currentUser={currentUser} onLogout={handleLogout} />
+        {logoutConfirmOpen && (
+          <LogoutConfirmationDialog
+            onCancel={() => setLogoutConfirmOpen(false)}
+            onConfirm={confirmLogout}
+            loggingOut={loggingOut}
+          />
+        )}
+      </>
     );
   }
 
@@ -895,6 +982,14 @@ export default function App() {
           await refreshUser();
         }}
       />
+
+      {logoutConfirmOpen && (
+        <LogoutConfirmationDialog
+          onCancel={() => setLogoutConfirmOpen(false)}
+          onConfirm={confirmLogout}
+          loggingOut={loggingOut}
+        />
+      )}
     </div>
   );
 }
