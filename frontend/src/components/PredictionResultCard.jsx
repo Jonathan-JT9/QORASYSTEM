@@ -33,6 +33,11 @@ export default function PredictionResultCard({ result }) {
   const confidencePct = (
     Number(result.confidence || 0) * 100
   ).toFixed(1);
+  const thresholdValue =
+    result.model?.threshold == null ? null : Number(result.model.threshold);
+  const thresholdPct = Number.isFinite(thresholdValue)
+    ? (thresholdValue * 100).toFixed(1)
+    : null;
 
   return (
     <div className="relative overflow-hidden rounded-2xl border-2 border-neutral-300 bg-white p-6 shadow-sm">
@@ -86,7 +91,7 @@ export default function PredictionResultCard({ result }) {
           </span>
 
           <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-            Confidence Model
+            Skor {isTb ? "kelas TB" : "kelas Normal"}
           </p>
 
         </div>
@@ -97,7 +102,7 @@ export default function PredictionResultCard({ result }) {
       <div className="mt-5 space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
 
         <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-600">
-          Probabilitas Prediksi Model
+          Skor model per kelas
         </p>
 
         {["TB", "Normal"].map((cls) => {
@@ -137,6 +142,15 @@ export default function PredictionResultCard({ result }) {
 
       </div>
 
+      {thresholdPct !== null && (
+        <p className="mt-3 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] leading-relaxed text-neutral-600">
+          Ambang klasifikasi: skor TB ≥ {thresholdPct}% menghasilkan label TB.
+          {isTb
+            ? " Skor TB pada hasil ini melewati ambang tersebut."
+            : " Skor TB pada hasil ini berada di bawah ambang tersebut."}
+        </p>
+      )}
+
       {/* Metadata */}
       <div className="mt-4 flex items-center justify-between pt-2 text-[11px] text-neutral-500">
 
@@ -164,8 +178,8 @@ export default function PredictionResultCard({ result }) {
       )}
 
       <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
-        Confidence merupakan skor prediksi model dan bukan ukuran
-        kepastian diagnosis klinis.
+        Skor model bukan ukuran kepastian diagnosis klinis dan belum tentu
+        mencerminkan probabilitas yang terkalibrasi.
       </p>
 
     </div>

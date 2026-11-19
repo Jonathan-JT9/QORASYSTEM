@@ -71,7 +71,9 @@ QORASYS/
 3. The first **6** pooled features are encoded, one per qubit.
 4. The 6-qubit variational circuit applies angle embedding, trainable rotations, and entanglement on `default.qubit`.
 5. Pauli-Z expectations from **3** circuit layers produce **18** values for the trained linear head.
-6. The head returns one logit; sigmoid gives the TB probability and its complement gives the Normal probability.
+6. The head returns one logit; sigmoid gives the model's TB score and its complement gives the Normal score. The label is TB when the TB score meets the threshold stored in the checkpoint; this threshold is not necessarily 0.5.
+
+These scores are model outputs, not clinical certainty and not necessarily calibrated probabilities. The checkpoint threshold is a classification decision point, not a diagnostic cutoff. Images from sources or populations that differ from the training data may produce different scores and require separate validation.
 
 The loaded checkpoint metadata identifies the backbone as `resnet50`. If a future checkpoint uses a different backbone, qubit count, or layer depth, update `model_loader.py` and ensure its state-dict keys and tensor shapes match. Loading uses `strict=False` as a safety net and logs missing/unexpected keys; the current `best.pt` has no missing or unexpected keys.
 

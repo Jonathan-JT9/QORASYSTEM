@@ -25,8 +25,8 @@ load_dotenv(ROOT/".env",override=True)
 logging.basicConfig(level=logging.INFO,format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger=logging.getLogger("qora")
 
-SUPABASE_URL=os.getenv("SUPABASE_URL","https://cyekxuupfkgyuawforpd.supabase.co")
-SUPABASE_ANON_KEY=os.getenv("SUPABASE_ANON_KEY","sb_publishable_ejvKK9J06eFvGzvLXabJ3A_fo4bswuQ")
+SUPABASE_URL=os.getenv("SUPABASE_URL","https://zojxlrbzaabewyvdhgwd.supabase.co")
+SUPABASE_ANON_KEY=os.getenv("SUPABASE_ANON_KEY","sb_publishable_LdYolU_dtpcCCuMOOxwpFw_O2pdafJM")
 
 ALLOWED_EXTENSIONS={".png",".jpg",".jpeg",".bmp",".webp",".tif",".tiff"}
 MAX_HISTORY=50

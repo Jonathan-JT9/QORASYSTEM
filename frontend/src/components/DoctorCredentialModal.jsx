@@ -891,6 +891,32 @@ export default function DoctorCredentialModal({
                 <ArrowLeft size={14} />
                 <span>Kembali ke STR</span>
               </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={savingProgress || loading}
+                  onClick={handleSaveProgress}
+                  className="flex items-center gap-1.5 rounded-xl border border-neutral-300 px-3.5 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition disabled:opacity-50"
+                  title="Simpan data saat ini ke Supabase"
+                >
+                  {savingProgress ? (
+                    <>
+                      <span className="qora-processing-spinner" />
+                      <span>Menyimpan…</span>
+                    </>
+                  ) : (
+                    <span>Simpan Progres</span>
+                  )}
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 rounded-xl bg-black px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800 transition"
+                >
+                  <span>Tinjau Ringkasan</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
             </div>
           </form>
         )}

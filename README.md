@@ -77,6 +77,36 @@ Di SQL Editor Supabase, jalankan `supabase/schema.sql`.
 
 Lihat `ARCHITECTURE.md`.
 
+## Evaluasi model pada dataset eksternal
+
+Untuk mengukur performa checkpoint pada citra berlabel dari sumber eksternal, siapkan dataset yang tidak digunakan saat training atau pemilihan threshold:
+
+```text
+cxr-test/
+├── Normal/
+│   ├── normal-001.png
+│   └── ...
+└── TB/
+    ├── tb-001.png
+    └── ...
+```
+
+Label harus berasal dari sumber tepercaya. Jika memungkinkan, pastikan pemisahan data berdasarkan pasien dan sumber gambar agar tidak ada gambar yang sama atau hampir sama di data training dan test. Jalankan dari direktori `backend`:
+
+```bash
+python evaluate_model.py --dataset /path/to/cxr-test --device cpu --output /path/to/evaluation-report.json
+```
+
+Skrip melaporkan confusion matrix, accuracy, sensitivity TB, specificity Normal, precision, F1, ROC-AUC, Brier score, dan ECE menggunakan threshold dari checkpoint. Skrip ini mengevaluasi classifier secara langsung; pemeriksaan Gemini/CLIP tidak dijalankan. Jangan memilih threshold dari hasil test: tentukan threshold pada validation set terpisah, lalu gunakan test set yang terkunci untuk pelaporan akhir. Metrik hanya berlaku pada dataset yang dievaluasi dan bukan validasi klinis.
+
+### Penjelasan untuk sidang
+
+Sesuaikan jawaban dengan hasil pengukuran yang benar-benar diperoleh; jangan mengklaim angka yang belum diuji:
+
+> “QORA adalah prototipe riset untuk mengklasifikasikan citra CXR menjadi Normal atau TB. Model menghasilkan skor dan memilih kelas dengan threshold yang ditetapkan pada validation set. Pada dataset eksternal yang label rujukannya dapat dipertanggungjawabkan, hasil pengujian kami adalah sensitivity **[isi hasil]**, specificity **[isi hasil]**, dan confusion matrix **[isi hasil]**. Sistem tetap menghasilkan salah satu dari dua label, sehingga kesalahan pada citra tertentu mungkin terjadi akibat keterbatasan model atau perbedaan distribusi data. Hasilnya bukan diagnosis klinis. Gambar Google tanpa label rujukan tepercaya tidak cukup untuk menyimpulkan akurasi. Pengujian pada sumber dan populasi yang lebih luas masih diperlukan.”
+
+Jika evaluasi eksternal belum selesai, sampaikan dengan jelas bahwa angka tersebut belum tersedia dan laporkan sebagai keterbatasan—jangan mengisi placeholder dengan metrik validasi internal atau perkiraan.
+
 ## Lisensi
 
 Prototype riset — sesuaikan lisensi sebelum distribusi produksi.
